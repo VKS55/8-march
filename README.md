@@ -1,2 +1,698 @@
-# 8-march
-Поздравление к 8 марта
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✨ С 8 марта! Салют и цветы ✨</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, #fff9f9 0%, #ffe6f0 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 20px 10px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* ===== ПАДАЮЩИЕ ЦВЕТЫ (фоновая анимация) ===== */
+        .flower-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;  /* чтобы не мешать кликам */
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .flower {
+            position: absolute;
+            font-size: 1.8rem;
+            opacity: 0.7;
+            user-select: none;
+            animation: fall linear infinite;
+            filter: drop-shadow(0 5px 5px #ffa5c3);
+            z-index: 0;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-20vh) rotate(0deg);
+                opacity: 0.9;
+            }
+            100% {
+                transform: translateY(100vh) rotate(300deg);
+                opacity: 0.2;
+            }
+        }
+
+        /* ===== САЛЮТ (холст поверх всего, но под контентом?) ===== */
+        #fireworks-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;  /* пропускать клики */
+            z-index: 5;            /* над фоном, но под интерфейсом? нужно чуть выше цветов */
+        }
+
+        /* основной контент ПОВЕРХ анимаций */
+        .container {
+            max-width: 900px;
+            width: 100%;
+            position: relative;
+            z-index: 20;  /* выше салюта и цветов */
+        }
+
+        .holiday-header {
+            background: #ffffffcc;
+            backdrop-filter: blur(8px);
+            border-radius: 60px 60px 30px 30px;
+            padding: 30px 25px 25px 25px;
+            box-shadow: 0 15px 35px rgba(231, 120, 176, 0.2);
+            border: 2px solid #ffb6d9;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .holiday-header h1 {
+            font-size: 2.8rem;
+            color: #c53f7e;
+            text-shadow: 2px 2px 0 #ffe2f0;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .holiday-header p {
+            font-size: 1.3rem;
+            color: #8f4f72;
+            background: #fff0f7;
+            display: inline-block;
+            padding: 12px 30px;
+            border-radius: 50px;
+            box-shadow: inset 0 2px 5px #ffc1da;
+            margin: 10px 0 5px;
+            line-height: 1.5;
+        }
+
+        .wishes {
+            background: #ffe7f0;
+            border-radius: 40px;
+            padding: 20px;
+            margin: 15px 0 5px;
+            border: 2px dashed #ff8cb0;
+            font-size: 1.2rem;
+            color: #5e2e45;
+        }
+
+        .wishes span {
+            display: inline-block;
+            font-size: 1.8rem;
+            filter: drop-shadow(0 3px 3px #fba9c4);
+        }
+
+        .quiz-section {
+            background: #ffffffdd;
+            backdrop-filter: blur(5px);
+            border-radius: 50px;
+            padding: 25px;
+            box-shadow: 0 10px 25px #ffc1d0;
+            margin-bottom: 30px;
+        }
+
+        .quiz-title {
+            font-size: 2rem;
+            color: #b3416b;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress {
+            background: #ffd9e8;
+            height: 18px;
+            border-radius: 30px;
+            margin: 20px 0;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #f78fb4, #fb6f9e);
+            border-radius: 30px;
+            transition: width 0.3s ease;
+        }
+
+        .question-text {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #32202a;
+            margin-bottom: 25px;
+            padding: 5px 15px;
+            background: #fef2f7;
+            border-radius: 40px;
+            border: 1px solid #ffb8d2;
+        }
+
+        .answers-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .answer-btn {
+            background: #ffffff;
+            border: 2px solid #ffbfd7;
+            border-radius: 60px;
+            padding: 16px 25px;
+            font-size: 1.25rem;
+            text-align: left;
+            color: #4f2b3a;
+            font-weight: 500;
+            transition: all 0.2s;
+            cursor: pointer;
+            box-shadow: 0 4px 8px #ffe2f0;
+        }
+
+        .answer-btn:hover:not(:disabled) {
+            background: #ffe2f0;
+            border-color: #ff88b2;
+            transform: scale(1.02);
+            box-shadow: 0 8px 15px #ffc1da;
+        }
+
+        .answer-btn.selected-correct {
+            background: #d4ffd4;
+            border-color: #4caf50;
+            color: #1d471d;
+        }
+
+        .answer-btn.selected-wrong {
+            background: #ffe0e0;
+            border-color: #f44336;
+            color: #a0002a;
+            text-decoration: line-through wavy #ff7474;
+        }
+
+        .answer-btn:disabled {
+            cursor: default;
+            opacity: 0.8;
+        }
+
+        .quiz-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .counter-info {
+            font-size: 1.4rem;
+            background: #ffecf2;
+            padding: 8px 25px;
+            border-radius: 40px;
+            color: #b84b73;
+        }
+
+        .next-btn {
+            background: #ff98bb;
+            border: none;
+            border-radius: 50px;
+            padding: 14px 40px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 5px 0 #b34d72;
+            cursor: pointer;
+            transition: 0.1s linear;
+            border: 2px solid #ffcddc;
+        }
+
+        .next-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 2px 0 #b34d72;
+        }
+
+        .next-btn:disabled {
+            opacity: 0.4;
+            transform: none;
+            box-shadow: 0 5px 0 #b34d72;
+            cursor: not-allowed;
+        }
+
+        .result-message {
+            font-size: 1.5rem;
+            color: #c94178;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+
+        .clicker-section {
+            background: #ffe4f0e0;
+            border-radius: 90px 90px 40px 40px;
+            padding: 25px 25px 30px;
+            border: 3px solid white;
+            box-shadow: 0 20px 30px #ffbfd0;
+            text-align: center;
+            margin-top: 30px;
+            backdrop-filter: blur(4px);
+        }
+
+        .clicker-title {
+            font-size: 1.9rem;
+            color: #c63f7b;
+            margin-bottom: 15px;
+        }
+
+        .heart-btn {
+            background: none;
+            border: none;
+            font-size: 5rem;
+            cursor: pointer;
+            transition: 0.15s;
+            filter: drop-shadow(0 10px 10px #ff90b0);
+            line-height: 1;
+        }
+
+        .heart-btn:active {
+            transform: scale(0.8);
+            filter: drop-shadow(0 5px 5px #ff4d7a);
+        }
+
+        .click-counter {
+            font-size: 2.2rem;
+            background: #ffffffb3;
+            border-radius: 60px;
+            padding: 8px 30px;
+            display: inline-block;
+            margin: 15px 0;
+            color: #ad3f68;
+            border: 2px solid #ffa7c4;
+        }
+
+        .surprise-box {
+            min-height: 120px;
+            background: #ffddea;
+            border-radius: 70px;
+            padding: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            font-size: 2.5rem;
+            border: 2px solid #ffb7cf;
+            transition: all 0.3s;
+        }
+
+        .surprise-box span {
+            display: inline-block;
+            animation: pop 0.3s ease;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .reset-surprise {
+            margin-top: 15px;
+            background: #fbc9da;
+            border: none;
+            border-radius: 40px;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            color: #5d2e44;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid white;
+            transition: 0.2s;
+        }
+        .reset-surprise:hover {
+            background: #ffb0cc;
+        }
+    </style>
+</head>
+<body>
+    <!-- КОНТЕЙНЕР ДЛЯ ПАДАЮЩИХ ЦВЕТОВ (динамически заполняется) -->
+    <div class="flower-container" id="flowerContainer"></div>
+
+    <!-- ХОЛСТ ДЛЯ САЛЮТА -->
+    <canvas id="fireworks-canvas"></canvas>
+
+    <div class="container">
+        <!-- ШАПКА -->
+        <div class="holiday-header">
+            <h1>🌸 8 Марта 🌸</h1>
+            <p>🌺 Международный женский день изначально был днём борьбы за права женщин. Сегодня это праздник всех женщин, девушек и девочек, символ нежности, красоты и весеннего обновления. В этот день принято дарить цветы, улыбки и тёплые пожелания.</p>
+            <div class="wishes">
+                <span>🌷✨</span> Дорогие женщины! Пусть каждый день дарит улыбки, цветы и тепло. 
+                Оставайтесь такими же удивительными, вдохновляйте и будьте счастливы! <span>✨🌹</span>
+            </div>
+            <div style="font-size:1.8rem; margin-top:15px;">💐 🐈 🌺 🐾 🌼</div>
+        </div>
+
+        <!-- ВИКТОРИНА 30 вопросов -->
+        <div class="quiz-section">
+            <div class="quiz-title">🌹 Весенняя викторина (30 вопросов)</div>
+            <div class="progress">
+                <div class="progress-bar" id="quizProgressBar" style="width:0%;"></div>
+            </div>
+            <div id="questionContainer">
+                <div class="question-text" id="questionText">Загрузка вопроса...</div>
+                <div class="answers-grid" id="answersContainer"></div>
+            </div>
+            <div class="quiz-footer">
+                <span class="counter-info" id="questionCounter">1 / 30</span>
+                <button class="next-btn" id="nextBtn" disabled>▶ Дальше</button>
+            </div>
+            <div id="quizResultMessage" class="result-message"></div>
+        </div>
+
+        <!-- КЛИКЕР сердечко + сюрпризы (салют и цветы) -->
+        <div class="clicker-section">
+            <div class="clicker-title">💗 Сердечный кликер 💗</div>
+            <button class="heart-btn" id="heartClicker">❤️</button>
+            <div class="click-counter" id="clickCounterDisplay">0 / 100</div>
+            <div class="surprise-box" id="surpriseBox">✨ жди чуда ✨</div>
+            <button class="reset-surprise" id="resetSurpriseBtn">🌸 Сбросить сюрприз 🌸</button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ------------- 30 вопросов -------------
+            const questions = [
+                { q: "Когда отмечают Международный женский день?", options: ["8 марта", "1 марта", "7 марта", "9 марта"], correct: 0 },
+                { q: "Какой цветок традиционно дарят на 8 марта в России?", options: ["Розы", "Тюльпаны", "Ромашки", "Кактусы"], correct: 1 },
+                { q: "В каком году впервые отпраздновали 8 марта?", options: ["1910", "1911", "1921", "1899"], correct: 1 },
+                { q: "Кто предложил учредить Международный женский день?", options: ["Клара Цеткин", "Надежда Крупская", "Роза Люксембург", "Александра Коллонтай"], correct: 0 },
+                { q: "Какой камень считается женским талисманом весны?", options: ["Изумруд", "Бирюза", "Аметист", "Жемчуг"], correct: 0 },
+                { q: "Какое растение не дарят на 8 марта?", options: ["Мимоза", "Тюльпан", "Гиацинт", "Опята"], correct: 3 },
+                { q: "Символ 8 марта в СССР в 70-80-е?", options: ["Мимоза и веточки", "Гвоздика", "Роза", "Ландыш"], correct: 0 },
+                { q: "Сколько стран официально отмечают 8 марта?", options: ["Около 30", "Более 50", "Меньше 10", "Ровно 15"], correct: 0 },
+                { q: "Весенний месяц, в который празднуют Женский день?", options: ["Март", "Апрель", "Февраль", "Май"], correct: 0 },
+                { q: "Какой праздник был до 8 марта в Древнем Риме?", options: ["Матроналии", "Сатурналии", "Луперкалии", "Вакханалии"], correct: 0 },
+                { q: "Кто из композиторов написал балет 'Весна священная'?", options: ["Чайковский", "Стравинский", "Прокофьев", "Рахманинов"], correct: 1 },
+                { q: "Какая актриса стала символом женственности в XX веке?", options: ["Мэрилин Монро", "Одри Хепбёрн", "Софи Лорен", "Вивьен Ли"], correct: 1 },
+                { q: "Как называют женщину-весну в русских сказках?", options: ["Весна-Красна", "Марья-искусница", "Снегурочка", "Царевна-лягушка"], correct: 0 },
+                { q: "Что дарят в Японии девочкам 3 марта (Хинамацури)?", options: ["Куклы", "Ирисы", "Рис", "Сакуру"], correct: 0 },
+                { q: "В какой стране 8 марта — государственный выходной?", options: ["Россия", "США", "Франция", "Германия"], correct: 0 },
+                { q: "Какая певица исполнила песню 'Лучшие цветы'?", options: ["Валерия", "Алсу", "Кристина Орбакайте", "Ирина Аллегрова"], correct: 3 },
+                { q: "Какого цвета не бывает у тюльпанов?", options: ["Синий", "Жёлтый", "Красный", "Белый"], correct: 0 },
+                { q: "Какой цветок называют 'слезой богини'?", options: ["Ландыш", "Лилия", "Ромашка", "Орхидея"], correct: 0 },
+                { q: "Какое дерево весной цветёт пушистыми серёжками?", options: ["Верба", "Дуб", "Клён", "Сосна"], correct: 0 },
+                { q: "Как звали первую женщину-космонавта?", options: ["Валентина Терешкова", "Светлана Савицкая", "Елена Кондакова", "Пегги Уитсон"], correct: 0 },
+                { q: "Какой напиток часто пьют за женское здоровье?", options: ["Красное вино", "Шампанское", "Зелёный чай", "Молоко"], correct: 1 },
+                { q: "Как звали богиню весны у славян?", options: ["Леля", "Марена", "Жива", "Весна"], correct: 0 },
+                { q: "Что означает мимоза в подарок?", options: ["Застенчивость и чувствительность", "Страсть", "Верность", "Богатство"], correct: 0 },
+                { q: "В каком фильме звучит 'Весна на Заречной улице'?", options: ["Весна на Заречной улице", "Карнавальная ночь", "Девчата", "Свинарка и пастух"], correct: 0 },
+                { q: "Кто написал 'Вальс цветов' из балета 'Щелкунчик'?", options: ["Чайковский", "Шопен", "Бах", "Моцарт"], correct: 0 },
+                { q: "Какой праздник отмечают через месяц после 8 марта?", options: ["Пасха", "Новый год", "День космонавтики", "День смеха"], correct: 3 },
+                { q: "Название тюльпана с бахромой?", options: ["Бахромчатые", "Пионовидные", "Лилиецветные", "Попугайные"], correct: 3 },
+                { q: "Кто написал картину 'Весна'?", options: ["Боттичелли", "Рафаэль", "Микеланджело", "Леонардо"], correct: 0 },
+                { q: "Какого цветка не существует в природе?", options: ["Фиолетовая роза", "Зелёная роза", "Чёрная роза", "Голубая роза"], correct: 3 },
+                { q: "Что весной приносят аисты?", options: ["Детей", "Цветы", "Письма", "Весну"], correct: 0 }
+            ];
+            while(questions.length < 30) questions.push({...questions[questions.length-1]});
+            if (questions.length > 30) questions.length = 30;
+
+            // ---------- ВИКТОРИНА ----------
+            let currentQuestionIndex = 0;
+            let score = 0;
+            let userAnswers = new Array(questions.length).fill(null);
+
+            const questionTextEl = document.getElementById('questionText');
+            const answersContainer = document.getElementById('answersContainer');
+            const nextBtn = document.getElementById('nextBtn');
+            const questionCounterEl = document.getElementById('questionCounter');
+            const progressBar = document.getElementById('quizProgressBar');
+            const quizResultMessage = document.getElementById('quizResultMessage');
+
+            function renderQuestion() {
+                const q = questions[currentQuestionIndex];
+                questionTextEl.textContent = q.q;
+                const selectedIdx = userAnswers[currentQuestionIndex];
+                answersContainer.innerHTML = '';
+                q.options.forEach((opt, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'answer-btn';
+                    btn.textContent = `${String.fromCharCode(65+idx)}. ${opt}`;
+                    if (selectedIdx !== null) {
+                        if (idx === q.correct) btn.classList.add('selected-correct');
+                        else if (idx === selectedIdx && selectedIdx !== q.correct) btn.classList.add('selected-wrong');
+                        btn.disabled = true;
+                    } else {
+                        btn.addEventListener('click', () => handleAnswer(idx));
+                    }
+                    answersContainer.appendChild(btn);
+                });
+
+                const answeredCount = userAnswers.filter(a => a !== null).length;
+                progressBar.style.width = `${(answeredCount / questions.length) * 100}%`;
+                questionCounterEl.textContent = `${currentQuestionIndex+1} / ${questions.length}`;
+                nextBtn.disabled = (userAnswers[currentQuestionIndex] === null);
+                if (answeredCount === questions.length) {
+                    nextBtn.disabled = false;
+                    nextBtn.textContent = (currentQuestionIndex === questions.length-1) ? '🏁 Показать результат' : '▶ Дальше';
+                } else {
+                    nextBtn.textContent = '▶ Дальше';
+                }
+            }
+
+            function handleAnswer(selectedIndex) {
+                if (userAnswers[currentQuestionIndex] !== null) return;
+                const q = questions[currentQuestionIndex];
+                userAnswers[currentQuestionIndex] = selectedIndex;
+                if (selectedIndex === q.correct) score++;
+                renderQuestion();
+                nextBtn.disabled = false;
+            }
+
+            function nextQuestion() {
+                if (nextBtn.disabled) return;
+                const allAnswered = userAnswers.every(a => a !== null);
+                if (allAnswered && currentQuestionIndex === questions.length-1) {
+                    quizResultMessage.innerHTML = `🌸 Вы ответили правильно на ${score} из ${questions.length} вопросов! С праздником! 🌸`;
+                    nextBtn.disabled = true;
+                    return;
+                }
+                if (currentQuestionIndex < questions.length-1) {
+                    currentQuestionIndex++;
+                    renderQuestion();
+                }
+            }
+            nextBtn.addEventListener('click', nextQuestion);
+            renderQuestion();
+
+            // ---------- ПАДАЮЩИЕ ЦВЕТЫ (фон) ----------
+            const flowerContainer = document.getElementById('flowerContainer');
+            const flowersList = ['🌸','🌼','🌺','🌷','🌹','🌻','🌿','🌸','🌼','🌷']; // котики тоже пусть падают :)
+            function createFlower() {
+                const flower = document.createElement('div');
+                flower.className = 'flower';
+                flower.textContent = flowersList[Math.floor(Math.random() * flowersList.length)];
+                // случайный размер
+                const size = 1.2 + Math.random() * 1.5;
+                flower.style.fontSize = size + 'rem';
+                flower.style.left = Math.random() * 100 + '%';
+                flower.style.animationDuration = 6 + Math.random() * 12 + 's'; // от 6 до 18 сек
+                flower.style.animationDelay = Math.random() * -20 + 's'; // чтобы сразу стартовали
+                flowerContainer.appendChild(flower);
+
+                // удалять старые, чтобы не забивать DOM (оставляем последние 100)
+                if (flowerContainer.children.length > 120) {
+                    flowerContainer.removeChild(flowerContainer.children[0]);
+                }
+            }
+            // создаём 40 цветов при загрузке
+            for (let i = 0; i < 40; i++) createFlower();
+            // продолжаем иногда добавлять (каждые 2 секунды)
+            setInterval(createFlower, 2000);
+
+            // ---------- САЛЮТ (на canvas) ----------
+            const canvas = document.getElementById('fireworks-canvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            let animationFrame = null;
+            let fireworksActive = false;
+
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            function createFirework() {
+                const count = 18 + Math.floor(Math.random()*15);
+                const baseX = Math.random() * canvas.width;
+                const baseY = Math.random() * canvas.height * 0.6 + 80; // не слишком низко
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * 2 * Math.PI;
+                    const speed = 3 + Math.random() * 6;
+                    const vx = Math.cos(angle) * speed;
+                    const vy = Math.sin(angle) * speed - 1.5; // небольшой upward bias
+                    particles.push({
+                        x: baseX,
+                        y: baseY,
+                        vx: vx,
+                        vy: vy,
+                        life: 0.9 + Math.random() * 0.5,
+                        color: `hsl(${Math.random()*30 + 340}, 90%, 65%)`, // розово-пурпурные
+                        size: 4 + Math.random() * 6
+                    });
+                }
+            }
+
+            function drawFireworks() {
+                if (!fireworksActive && particles.length === 0) {
+                    if (animationFrame) {
+                        cancelAnimationFrame(animationFrame);
+                        animationFrame = null;
+                        ctx.clearRect(0,0,canvas.width,canvas.height);
+                    }
+                    return;
+                }
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                for (let i = particles.length-1; i>=0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.08; // гравитация
+                    p.life -= 0.008;
+                    if (p.life <= 0.02 || p.y > canvas.height+50) {
+                        particles.splice(i,1);
+                        continue;
+                    }
+                    ctx.globalAlpha = p.life;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2);
+                    ctx.fillStyle = p.color;
+                    ctx.fill();
+                    // добавим искорки
+                    ctx.shadowColor = 'white';
+                    ctx.shadowBlur = 10;
+                }
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1.0;
+                if (fireworksActive) {
+                    // периодически создаём новые вспышки
+                    if (Math.random() < 0.15) createFirework();
+                }
+                animationFrame = requestAnimationFrame(drawFireworks);
+            }
+
+            function startFireworks() {
+                fireworksActive = true;
+                if (!animationFrame) {
+                    drawFireworks();
+                }
+                // сразу создадим пару взрывов
+                for (let i=0;i<4;i++) {
+                    setTimeout(() => createFirework(), i*150);
+                }
+            }
+
+            function stopFireworks() {
+                fireworksActive = false;
+                // частицы доживут и исчезнут, потом отключится анимация
+            }
+
+            // ---------- КЛИКЕР И СВЯЗЬ С САЛЮТОМ----------
+            const heartBtn = document.getElementById('heartClicker');
+            const clickCounterDisplay = document.getElementById('clickCounterDisplay');
+            const surpriseBox = document.getElementById('surpriseBox');
+            const resetSurpriseBtn = document.getElementById('resetSurpriseBtn');
+
+            let clickCount = 0;
+            const maxClicks = 100;
+            const flowersAndCats = ['🌺','🌸','🌷','🌼','🌻','🌹','🌿','🍀','🐱','😻','🐾','💞'];
+            let saloonTriggered = false; // чтобы не включать повторно
+
+            function getRandomSurprise(amount = 5) {
+                let items = [];
+                for (let i = 0; i < amount; i++) {
+                    items.push(flowersAndCats[Math.floor(Math.random() * flowersAndCats.length)]);
+                }
+                return items.join(' ');
+            }
+
+            function updateClicker() {
+                clickCounterDisplay.textContent = `${clickCount} / ${maxClicks}`;
+                if (clickCount >= maxClicks) {
+                    surpriseBox.innerHTML = getRandomSurprise(16) + '  ✨💖✨  ' + getRandomSurprise(8);
+                    // если первый раз достигли 100 — запускаем салют
+                    if (!saloonTriggered) {
+                        saloonTriggered = true;
+                        startFireworks();
+                    }
+                } else {
+                    surpriseBox.innerHTML = '✨ жди чуда ✨';
+                    if (saloonTriggered) {
+                        // сбросили флаг если клики уменьшились? но сброс отдельно.
+                    }
+                }
+            }
+
+            heartBtn.addEventListener('click', function() {
+                if (clickCount < maxClicks) {
+                    clickCount++;
+                    updateClicker();
+                } else {
+                    // даже если больше 100, всё равно можно запускать повторно салют? но по желанию, пусть каждый клик делает вспышку!
+                    if (clickCount >= maxClicks) {
+                        // при клике выше 100 добавляем салют-вспышку
+                        createFirework(); 
+                    }
+                }
+            });
+
+            resetSurpriseBtn.addEventListener('click', function() {
+                clickCount = 0;
+                saloonTriggered = false; // разрешить салют снова
+                stopFireworks();
+                particles = []; // очищаем частицы
+                updateClicker();
+                surpriseBox.innerHTML = '✨ жди чуда ✨';
+                if (animationFrame) {
+                    cancelAnimationFrame(animationFrame);
+                    animationFrame = null;
+                    ctx.clearRect(0,0,canvas.width,canvas.height);
+                }
+            });
+
+            // дополнительно: если клик≥100 каждый клик делает микро-салют (выше уже добавили createFirework)
+            // но сделаем красиво: при клике ≥100 всегда createFirework()
+            // улучшим listener:
+            const originalHandler = heartBtn.click;
+            heartBtn.addEventListener('click', function() {
+                if (clickCount >= maxClicks) {
+                    createFirework(); // дополнительная вспышка на каждый клик после 100
+                }
+            });
+            // инициализация
+            updateClicker();
+
+            // принудительно запустим падающие цветы сразу (они уже есть)
+        })();
+    </script>
+</body>
+</html>
