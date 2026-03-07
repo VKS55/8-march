@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>✨ С 8 марта! Салют и цветы ✨</title>
+    <title>✨ С 8 марта! Фейерверк из сердечек ✨</title>
     <style>
         * {
             margin: 0;
@@ -29,7 +29,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none;  /* чтобы не мешать кликам */
+            pointer-events: none;
             z-index: 0;
             overflow: hidden;
         }
@@ -55,23 +55,23 @@
             }
         }
 
-        /* ===== САЛЮТ (холст поверх всего, но под контентом?) ===== */
-        #fireworks-canvas {
+        /* ===== ФЕЙЕРВЕРК ИЗ СЕРДЕЧЕК (холст) ===== */
+        #heart-fireworks-canvas {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none;  /* пропускать клики */
-            z-index: 5;            /* над фоном, но под интерфейсом? нужно чуть выше цветов */
+            pointer-events: none;
+            z-index: 100; /* ПОВЕРХ всего контента */
         }
 
-        /* основной контент ПОВЕРХ анимаций */
+        /* основной контент */
         .container {
             max-width: 900px;
             width: 100%;
             position: relative;
-            z-index: 20;  /* выше салюта и цветов */
+            z-index: 50; /* выше фона, но ниже фейерверка (100) */
         }
 
         .holiday-header {
@@ -256,10 +256,16 @@
         }
 
         .result-message {
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             color: #c94178;
             font-weight: bold;
             margin-top: 15px;
+            padding: 15px;
+            background: #fff0f7;
+            border-radius: 50px;
+            border: 2px solid #ff9dc0;
+            text-align: center;
+            line-height: 1.5;
         }
 
         .clicker-section {
@@ -300,13 +306,13 @@
             border-radius: 60px;
             padding: 8px 30px;
             display: inline-block;
-            margin: 15px 0;
+            margin: 15px 0 15px 0;
             color: #ad3f68;
             border: 2px solid #ffa7c4;
         }
 
         .surprise-box {
-            min-height: 120px;
+            min-height: 80px;
             background: #ffddea;
             border-radius: 70px;
             padding: 20px;
@@ -315,24 +321,16 @@
             align-items: center;
             justify-content: center;
             gap: 18px;
-            font-size: 2.5rem;
+            font-size: 2rem;
             border: 2px solid #ffb7cf;
             transition: all 0.3s;
-        }
-
-        .surprise-box span {
-            display: inline-block;
-            animation: pop 0.3s ease;
-        }
-
-        @keyframes pop {
-            0% { transform: scale(0); opacity: 0; }
-            80% { transform: scale(1.2); }
-            100% { transform: scale(1); }
+            margin-bottom: 20px;
+            color: #b84b73;
+            font-style: italic;
         }
 
         .reset-surprise {
-            margin-top: 15px;
+            margin-top: 5px;
             background: #fbc9da;
             border: none;
             border-radius: 40px;
@@ -343,6 +341,7 @@
             cursor: pointer;
             border: 2px solid white;
             transition: 0.2s;
+            display: inline-block;
         }
         .reset-surprise:hover {
             background: #ffb0cc;
@@ -350,11 +349,11 @@
     </style>
 </head>
 <body>
-    <!-- КОНТЕЙНЕР ДЛЯ ПАДАЮЩИХ ЦВЕТОВ (динамически заполняется) -->
+    <!-- КОНТЕЙНЕР ДЛЯ ПАДАЮЩИХ ЦВЕТОВ -->
     <div class="flower-container" id="flowerContainer"></div>
 
-    <!-- ХОЛСТ ДЛЯ САЛЮТА -->
-    <canvas id="fireworks-canvas"></canvas>
+    <!-- ХОЛСТ ДЛЯ ФЕЙЕРВЕРКА ИЗ СЕРДЕЧЕК (ПОВЕРХ ВСЕГО) -->
+    <canvas id="heart-fireworks-canvas"></canvas>
 
     <div class="container">
         <!-- ШАПКА -->
@@ -362,8 +361,7 @@
             <h1>🌸 8 Марта 🌸</h1>
             <p>🌺 Международный женский день изначально был днём борьбы за права женщин. Сегодня это праздник всех женщин, девушек и девочек, символ нежности, красоты и весеннего обновления. В этот день принято дарить цветы, улыбки и тёплые пожелания.</p>
             <div class="wishes">
-                <span>🌷✨</span> Дорогие, прекрасные, удивительные!<br><br> Поздравляю вас с праздником 8 Марта! Этот день — символ пробуждения природы, нежности и той невероятной силы, которую вы дарите миру.<br><br> Пусть в вашей душе всегда цветет весна, независимо от погоды за окном. Маленьким принцессам желаем чудесных открытий, юным леди — ярких мечтаний и любви, а мудрым и прекрасным женщинам — гармонии, здоровья и тепла в доме.<br><br> Будьте счастливы, сияйте улыбками и знайте, что ваша доброта и красота делают этот мир по-настоящему живым. С праздником! <span>✨🌹</span>
-            </div>
+               <span>🌷✨</span> Дорогие, прекрасные, удивительные!<br><br> Поздравляю вас с праздником 8 Марта! Этот день — символ пробуждения природы, нежности и той невероятной силы, которую вы дарите миру.<br><br> Пусть в вашей душе всегда цветет весна, независимо от погоды за окном. Маленьким принцессам желаем чудесных открытий, юным леди — ярких мечтаний и любви, а мудрым и прекрасным женщинам — гармонии, здоровья и тепла в доме.<br><br> Будьте счастливы, сияйте улыбками и знайте, что ваша доброта и красота делают этот мир по-настоящему живым. С праздником! <span>✨🌹</span>
             <div style="font-size:1.8rem; margin-top:15px;">💐 🐈 🌺 🐾 🌼</div>
         </div>
 
@@ -384,13 +382,19 @@
             <div id="quizResultMessage" class="result-message"></div>
         </div>
 
-        <!-- КЛИКЕР сердечко + сюрпризы (салют и цветы) -->
+        <!-- КЛИКЕР сердечко + сюрприз -->
         <div class="clicker-section">
             <div class="clicker-title">💗 Сердечный кликер 💗</div>
             <button class="heart-btn" id="heartClicker">❤️</button>
             <div class="click-counter" id="clickCounterDisplay">0 / 100</div>
+            
+            <!-- Блок сюрприза (всегда показывает "жди чуда") -->
             <div class="surprise-box" id="surpriseBox">✨ жди чуда ✨</div>
-            <button class="reset-surprise" id="resetSurpriseBtn">🌸 Сбросить сюрприз 🌸</button>
+            
+            <!-- Кнопка на отдельной строке -->
+            <div>
+                <button class="reset-surprise" id="resetSurpriseBtn">🌸 Сбросить сюрприз 🌸</button>
+            </div>
         </div>
     </div>
 
@@ -484,12 +488,40 @@
                 nextBtn.disabled = false;
             }
 
+            function getCongratulationMessage(score, total) {
+                const percentage = (score / total) * 100;
+                
+                if (percentage === 100) {
+                    return "💯🌺 ВОСХИТИТЕЛЬНО! 30 из 30! Вы настоящий знаток весенних традиций! Пусть ваши знания так же ярко сияют, как солнце в этот прекрасный день! 💐✨";
+                } else if (score >= 27) {
+                    return "🏆🌟 БЛИСТАТЕЛЬНО! " + score + " правильных ответов! Ваша эрудиция достойна самых красивых комплиментов! С 8 марта! 🌷💫";
+                } else if (score >= 24) {
+                    return "🎉💮 ПРЕКРАСНЫЙ РЕЗУЛЬТАТ! " + score + " из 30! Вы словно весенний букет — яркая и неповторимая! Продолжайте в том же духе! 🌸🌼";
+                } else if (score >= 20) {
+                    return "🌹🌿 ОЧЕНЬ ХОРОШО! " + score + " правильных ответов! Вы порадовали нас своей эрудицией, как первые цветы радуют глаз! С праздником! 🎀✨";
+                } else if (score >= 15) {
+                    return "🌱💗 ХОРОШИЙ РЕЗУЛЬТАТ! " + score + " из 30! Как весна, вы только начинаете раскрываться! Желаем вам новых открытий и знаний! 🌷📚";
+                } else if (score >= 10) {
+                    return "🌼🍃 НЕПЛОХО! " + score + " правильных ответов! Весна только начинается, и впереди много интересного! Главное — ваше очарование! 💖🌸";
+                } else if (score >= 5) {
+                    return "🌱💕 " + score + " ИЗ 30! Как первые листочки, ваши знания будут расти с каждым днём! С праздником весны, нежности и красоты! 🦋🌺";
+                } else {
+                    return "🍃🌷 " + score + " правильных ответов. Но главное не количество баллов, а ваша улыбка! Она дороже всех цветов мира! С 8 марта! 💐😊💗";
+                }
+            }
+
             function nextQuestion() {
                 if (nextBtn.disabled) return;
                 const allAnswered = userAnswers.every(a => a !== null);
                 if (allAnswered && currentQuestionIndex === questions.length-1) {
-                    quizResultMessage.innerHTML = `🌸 Вы ответили правильно на ${score} из ${questions.length} вопросов! С праздником! 🌸`;
+                    const message = getCongratulationMessage(score, questions.length);
+                    quizResultMessage.innerHTML = message;
                     nextBtn.disabled = true;
+                    
+                    // Запускаем дополнительный фейерверк в честь завершения викторины
+                    for (let i = 0; i < 5; i++) {
+                        setTimeout(() => createFirework(), i * 200);
+                    }
                     return;
                 }
                 if (currentQuestionIndex < questions.length-1) {
@@ -502,31 +534,27 @@
 
             // ---------- ПАДАЮЩИЕ ЦВЕТЫ (фон) ----------
             const flowerContainer = document.getElementById('flowerContainer');
-            const flowersList = ['🌸','🌼','🌺','🌷','🌹','🌻','🌿','🌸','🌼','🌷']; // котики тоже пусть падают :)
+            const flowersList = ['🌸','🌼','🌺','🌷','🌹','🌻','🌿','🌸','🌼','🌷']; 
             function createFlower() {
                 const flower = document.createElement('div');
                 flower.className = 'flower';
                 flower.textContent = flowersList[Math.floor(Math.random() * flowersList.length)];
-                // случайный размер
                 const size = 1.2 + Math.random() * 1.5;
                 flower.style.fontSize = size + 'rem';
                 flower.style.left = Math.random() * 100 + '%';
-                flower.style.animationDuration = 6 + Math.random() * 12 + 's'; // от 6 до 18 сек
-                flower.style.animationDelay = Math.random() * -20 + 's'; // чтобы сразу стартовали
+                flower.style.animationDuration = 6 + Math.random() * 12 + 's';
+                flower.style.animationDelay = Math.random() * -20 + 's';
                 flowerContainer.appendChild(flower);
 
-                // удалять старые, чтобы не забивать DOM (оставляем последние 100)
                 if (flowerContainer.children.length > 120) {
                     flowerContainer.removeChild(flowerContainer.children[0]);
                 }
             }
-            // создаём 40 цветов при загрузке
             for (let i = 0; i < 40; i++) createFlower();
-            // продолжаем иногда добавлять (каждые 2 секунды)
             setInterval(createFlower, 2000);
 
-            // ---------- САЛЮТ (на canvas) ----------
-            const canvas = document.getElementById('fireworks-canvas');
+            // ---------- ФЕЙЕРВЕРК ИЗ СЕРДЕЧЕК (на canvas) ----------
+            const canvas = document.getElementById('heart-fireworks-canvas');
             const ctx = canvas.getContext('2d');
             let particles = [];
             let animationFrame = null;
@@ -539,23 +567,28 @@
             window.addEventListener('resize', resizeCanvas);
             resizeCanvas();
 
+            // Разные сердечки для фейерверка
+            const heartEmojis = ['💛', '💚', '💙', '💜', '💖', '💗', '💓', '💕', '❤️‍🔥', '💘', '💝'];
+
             function createFirework() {
-                const count = 18 + Math.floor(Math.random()*15);
+                const count = 15 + Math.floor(Math.random() * 15);
                 const baseX = Math.random() * canvas.width;
-                const baseY = Math.random() * canvas.height * 0.6 + 80; // не слишком низко
+                const baseY = Math.random() * canvas.height * 0.6 + 80;
+                
                 for (let i = 0; i < count; i++) {
                     const angle = Math.random() * 2 * Math.PI;
-                    const speed = 3 + Math.random() * 6;
+                    const speed = 2 + Math.random() * 5;
                     const vx = Math.cos(angle) * speed;
-                    const vy = Math.sin(angle) * speed - 1.5; // небольшой upward bias
+                    const vy = Math.sin(angle) * speed - 1.2;
+                    
                     particles.push({
                         x: baseX,
                         y: baseY,
                         vx: vx,
                         vy: vy,
                         life: 0.9 + Math.random() * 0.5,
-                        color: `hsl(${Math.random()*30 + 340}, 90%, 65%)`, // розово-пурпурные
-                        size: 4 + Math.random() * 6
+                        emoji: heartEmojis[Math.floor(Math.random() * heartEmojis.length)],
+                        size: 16 + Math.random() * 16
                     });
                 }
             }
@@ -565,36 +598,39 @@
                     if (animationFrame) {
                         cancelAnimationFrame(animationFrame);
                         animationFrame = null;
-                        ctx.clearRect(0,0,canvas.width,canvas.height);
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
                     }
                     return;
                 }
-                ctx.clearRect(0,0,canvas.width,canvas.height);
-                for (let i = particles.length-1; i>=0; i--) {
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                for (let i = particles.length - 1; i >= 0; i--) {
                     const p = particles[i];
                     p.x += p.vx;
                     p.y += p.vy;
-                    p.vy += 0.08; // гравитация
-                    p.life -= 0.008;
-                    if (p.life <= 0.02 || p.y > canvas.height+50) {
-                        particles.splice(i,1);
+                    p.vy += 0.05;
+                    p.life -= 0.006;
+                    
+                    if (p.life <= 0.02 || p.y > canvas.height + 50) {
+                        particles.splice(i, 1);
                         continue;
                     }
-                    ctx.globalAlpha = p.life;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2);
-                    ctx.fillStyle = p.color;
-                    ctx.fill();
-                    // добавим искорки
-                    ctx.shadowColor = 'white';
-                    ctx.shadowBlur = 10;
+                    
+                    ctx.save();
+                    ctx.globalAlpha = p.life * 0.9;
+                    ctx.font = `${p.size * p.life}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "EmojiOne Color", sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#000';
+                    ctx.fillText(p.emoji, p.x, p.y);
+                    ctx.restore();
                 }
-                ctx.shadowBlur = 0;
-                ctx.globalAlpha = 1.0;
+                
                 if (fireworksActive) {
-                    // периодически создаём новые вспышки
-                    if (Math.random() < 0.15) createFirework();
+                    if (Math.random() < 0.2) createFirework();
                 }
+                
                 animationFrame = requestAnimationFrame(drawFireworks);
             }
 
@@ -603,18 +639,16 @@
                 if (!animationFrame) {
                     drawFireworks();
                 }
-                // сразу создадим пару взрывов
-                for (let i=0;i<4;i++) {
-                    setTimeout(() => createFirework(), i*150);
+                for (let i = 0; i < 4; i++) {
+                    setTimeout(() => createFirework(), i * 150);
                 }
             }
 
             function stopFireworks() {
                 fireworksActive = false;
-                // частицы доживут и исчезнут, потом отключится анимация
             }
 
-            // ---------- КЛИКЕР И СВЯЗЬ С САЛЮТОМ----------
+            // ---------- КЛИКЕР С СЮРПРИЗОМ (НАДПИСЬ НЕ МЕНЯЕТСЯ) ----------
             const heartBtn = document.getElementById('heartClicker');
             const clickCounterDisplay = document.getElementById('clickCounterDisplay');
             const surpriseBox = document.getElementById('surpriseBox');
@@ -622,31 +656,17 @@
 
             let clickCount = 0;
             const maxClicks = 100;
-            const flowersAndCats = ['🌺','🌸','🌷','🌼','🌻','🌹','🌿','🍀','🐱','😻','🐾','💞'];
-            let saloonTriggered = false; // чтобы не включать повторно
-
-            function getRandomSurprise(amount = 5) {
-                let items = [];
-                for (let i = 0; i < amount; i++) {
-                    items.push(flowersAndCats[Math.floor(Math.random() * flowersAndCats.length)]);
-                }
-                return items.join(' ');
-            }
+            let fireworksTriggered = false;
 
             function updateClicker() {
                 clickCounterDisplay.textContent = `${clickCount} / ${maxClicks}`;
-                if (clickCount >= maxClicks) {
-                    surpriseBox.innerHTML = getRandomSurprise(16) + '  ✨💖✨  ' + getRandomSurprise(8);
-                    // если первый раз достигли 100 — запускаем салют
-                    if (!saloonTriggered) {
-                        saloonTriggered = true;
-                        startFireworks();
-                    }
-                } else {
-                    surpriseBox.innerHTML = '✨ жди чуда ✨';
-                    if (saloonTriggered) {
-                        // сбросили флаг если клики уменьшились? но сброс отдельно.
-                    }
+                
+                // НАДПИСЬ НИКОГДА НЕ МЕНЯЕТСЯ!
+                surpriseBox.innerHTML = '✨ жди чуда ✨';
+                
+                if (clickCount >= maxClicks && !fireworksTriggered) {
+                    fireworksTriggered = true;
+                    startFireworks();
                 }
             }
 
@@ -654,42 +674,27 @@
                 if (clickCount < maxClicks) {
                     clickCount++;
                     updateClicker();
-                } else {
-                    // даже если больше 100, всё равно можно запускать повторно салют? но по желанию, пусть каждый клик делает вспышку!
-                    if (clickCount >= maxClicks) {
-                        // при клике выше 100 добавляем салют-вспышку
-                        createFirework(); 
-                    }
+                }
+                
+                if (clickCount >= maxClicks) {
+                    createFirework(); // сердечковая вспышка при каждом клике после 100
                 }
             });
 
             resetSurpriseBtn.addEventListener('click', function() {
                 clickCount = 0;
-                saloonTriggered = false; // разрешить салют снова
+                fireworksTriggered = false;
                 stopFireworks();
-                particles = []; // очищаем частицы
+                particles = [];
                 updateClicker();
-                surpriseBox.innerHTML = '✨ жди чуда ✨';
                 if (animationFrame) {
                     cancelAnimationFrame(animationFrame);
                     animationFrame = null;
-                    ctx.clearRect(0,0,canvas.width,canvas.height);
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
                 }
             });
 
-            // дополнительно: если клик≥100 каждый клик делает микро-салют (выше уже добавили createFirework)
-            // но сделаем красиво: при клике ≥100 всегда createFirework()
-            // улучшим listener:
-            const originalHandler = heartBtn.click;
-            heartBtn.addEventListener('click', function() {
-                if (clickCount >= maxClicks) {
-                    createFirework(); // дополнительная вспышка на каждый клик после 100
-                }
-            });
-            // инициализация
             updateClicker();
-
-            // принудительно запустим падающие цветы сразу (они уже есть)
         })();
     </script>
 </body>
