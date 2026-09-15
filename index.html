@@ -1,1774 +1,701 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Физика-Кликер v10</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
-  body {
-    font-family: 'Segoe UI', sans-serif;
-    background: radial-gradient(circle at 50% 0%, #1a2a6c, #0a0e27 70%);
-    color: #e0e6ff;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-    transition: background 0.3s;
-  }
-  body.crit-flash { background: radial-gradient(circle at 50% 0%, #6a2a2a, #1a0a0a 70%); }
-  .game { display: flex; gap: 20px; padding: 15px; max-width: 1200px; width: 100%; height: 96vh; }
-  .click-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; position: relative; }
-  .stats { text-align: center; }
-  .energy { font-size: 2.4em; font-weight: bold; color: #4dd0ff; text-shadow: 0 0 20px #4dd0ff88; }
-  .eps { font-size: 0.95em; color: #8899cc; margin-top: 5px; }
-  .bonus-line { font-size: 0.82em; color: #ffd166; margin-top: 4px; min-height: 1.2em; }
-  .atom-wrap { position: relative; width: 220px; height: 220px; display: flex; align-items: center; justify-content: center; }
-  .atom-wrap.crit-shake { animation: critShake 0.4s; }
-  @keyframes critShake {
-    0%, 100% { transform: translate(0,0); }
-    25% { transform: translate(-6px, 3px); }
-    50% { transform: translate(5px, -3px); }
-    75% { transform: translate(-3px, 4px); }
-  }
-  #atom {
-    width: 180px; height: 180px; border-radius: 50%; cursor: pointer;
-    position: relative; transition: transform 0.08s, background 0.3s, box-shadow 0.3s;
-    display: flex; align-items: center; justify-content: center; font-size: 3em; z-index: 2;
-  }
-  #atom:active { transform: scale(0.92); }
-  #atom::before, #atom::after {
-    content: ''; position: absolute; border: 2px solid #4dd0ff55; border-radius: 50%;
-    width: 100%; height: 100%; transition: border-color 0.3s;
-  }
-  #atom::before { transform: rotate(60deg) scaleY(0.4); }
-  #atom::after { transform: rotate(-60deg) scaleY(0.4); }
-  .shockwave {
-    position: absolute; top: 50%; left: 50%; width: 180px; height: 180px;
-    margin: -90px 0 0 -90px; border-radius: 50%; border: 3px solid #4dd0ff;
-    pointer-events: none; z-index: 1; animation: shockwave 0.5s ease-out forwards;
-  }
-  @keyframes shockwave {
-    0% { transform: scale(0.5); opacity: 1; border-width: 4px; }
-    100% { transform: scale(2.2); opacity: 0; border-width: 1px; }
-  }
-  .shockwave.crit { border-color: #ffd166; border-width: 6px; box-shadow: 0 0 30px #ffd166; }
-  .nucleus-frag {
-    position: absolute; top: 50%; left: 50%; width: 8px; height: 8px;
-    margin: -4px 0 0 -4px; border-radius: 50%; pointer-events: none; z-index: 5;
-    box-shadow: 0 0 8px currentColor; animation: fragFly 0.7s ease-out forwards;
-  }
-  @keyframes fragFly {
-    0% { transform: translate(0,0) scale(1); opacity: 1; }
-    100% { transform: translate(var(--dx), var(--dy)) scale(0.2); opacity: 0; }
-  }
-  .skin-default { background: radial-gradient(circle at 35% 35%, #6ee7ff, #0a5c99 60%, #062a4a); box-shadow: 0 0 60px #4dd0ff88, inset 0 0 40px #00000066; }
-  .skin-fire    { background: radial-gradient(circle at 35% 35%, #ffcc66, #cc3300 60%, #4a0a00); box-shadow: 0 0 70px #ff663388, inset 0 0 40px #00000066; }
-  .skin-ice     { background: radial-gradient(circle at 35% 35%, #ccffff, #4d9fff 60%, #00204a); box-shadow: 0 0 70px #88ddff88, inset 0 0 40px #00000066; }
-  .skin-quantum { background: radial-gradient(circle at 35% 35%, #dd88ff, #6600cc 60%, #20004a); box-shadow: 0 0 70px #cc66ff88, inset 0 0 40px #00000066; }
-  .skin-gold    { background: radial-gradient(circle at 35% 35%, #fff2aa, #cc9900 60%, #4a3300); box-shadow: 0 0 80px #ffd16688, inset 0 0 40px #00000066; }
-  #fxCanvas { position: fixed; inset: 0; pointer-events: none; z-index: 3; }
-  .chest-bar { width: 260px; text-align: center; }
-  .chest-bar .label { font-size: 0.8em; color: #8899cc; margin-bottom: 4px; }
-  .progress { height: 14px; background: #0d1330; border: 1px solid #2a3a6c; border-radius: 8px; overflow: hidden; }
-  .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #4dd0ff, #a06eff); transition: width 0.15s; }
-  .hint { font-size: 0.78em; color: #667799; text-align: center; }
-  .panel {
-    width: 440px; background: #0d1330cc; border: 1px solid #2a3a6c; border-radius: 16px;
-    padding: 14px; display: flex; flex-direction: column; gap: 10px; max-height: 100%;
-  }
-  .tabs { display: flex; gap: 4px; flex-wrap: wrap; }
-  .tab {
-    flex: 1; min-width: 55px; padding: 7px 4px; background: #141c3f; border: 1px solid #2a3a6c;
-    border-radius: 8px; cursor: pointer; text-align: center; font-size: 0.72em;
-    color: #8899cc; transition: 0.15s;
-  }
-  .tab:hover { background: #1c2a5c; }
-  .tab.active { background: #1c2a5c; border-color: #4dd0ff; color: #4dd0ff; font-weight: bold; }
-  .tab.daily-alert { border-color: #ffd166; color: #ffd166; animation: dailyPulse 1s infinite; }
-  @keyframes dailyPulse { 0%,100% { box-shadow: 0 0 0 #ffd16600; } 50% { box-shadow: 0 0 12px #ffd16688; } }
-  .content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
-  .content::-webkit-scrollbar { width: 6px; }
-  .content::-webkit-scrollbar-thumb { background: #2a3a6c; border-radius: 3px; }
-  .item {
-    background: #141c3f; border: 1px solid #2a3a6c; border-radius: 10px; padding: 9px 12px;
-    cursor: pointer; transition: 0.15s; display: flex; justify-content: space-between;
-    align-items: center; gap: 8px;
-  }
-  .item:hover:not(.locked):not(.no-click) { background: #1c2a5c; border-color: #4dd0ff; }
-  .item.locked { opacity: 0.4; cursor: not-allowed; }
-  .item.no-click { cursor: default; }
-  .item.discovered { border-color: #88ffaa; background: #0a2a1a; }
-  .item .info { flex: 1; }
-  .item .name { font-weight: bold; font-size: 0.9em; }
-  .item .desc { font-size: 0.72em; color: #8899cc; margin-top: 2px; }
-  .item .cost { color: #ffd166; font-weight: bold; font-size: 0.85em; text-align: right; white-space: nowrap; }
-  .item .count { font-size: 0.72em; color: #4dd0ff; text-align: right; }
-  .item.rarity-common { border-color: #4a5a8c; }
-  .item.rarity-rare { border-color: #4dd0ff; box-shadow: 0 0 10px #4dd0ff44; }
-  .item.rarity-epic { border-color: #a06eff; box-shadow: 0 0 12px #a06eff55; }
-  .item.rarity-legend { border-color: #ffd166; box-shadow: 0 0 14px #ffd16666; }
-  .big-btn {
-    padding: 12px; background: linear-gradient(135deg, #a06eff, #4dd0ff);
-    color: #0a0e27; border: none; border-radius: 10px; font-weight: bold;
-    cursor: pointer; font-size: 0.95em; transition: 0.15s;
-  }
-  .big-btn:hover { filter: brightness(1.15); }
-  .big-btn:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
-  .reset {
-    padding: 7px; background: #2a1a1a; border: 1px solid #5c2a2a;
-    color: #ff8888; border-radius: 8px; cursor: pointer; font-size: 0.78em;
-  }
-  .reset:hover { background: #3a2020; }
-  .float {
-    position: fixed; pointer-events: none; color: #4dd0ff; font-weight: bold;
-    font-size: 1.3em; animation: floatUp 0.9s ease-out forwards; z-index: 100;
-  }
-  @keyframes floatUp { to { transform: translateY(-60px); opacity: 0; } }
-  .float.crit {
-    color: #ffd166; font-size: 2em;
-    text-shadow: 0 0 12px #ffd166, 0 0 24px #ff8800;
-    animation: critFloat 1.2s ease-out forwards;
-  }
-  @keyframes critFloat {
-    0% { transform: scale(0.5) rotate(-15deg); opacity: 0; }
-    20% { transform: scale(1.3) rotate(8deg); opacity: 1; }
-    100% { transform: scale(1) translateY(-100px) rotate(0deg); opacity: 0; }
-  }
-  .chest-fly {
-    position: fixed; font-size: 2.2em; pointer-events: none; z-index: 200;
-    animation: chestPop 1.2s ease-out forwards;
-  }
-  @keyframes chestPop {
-    0% { transform: scale(0.3) rotate(-15deg); opacity: 0; }
-    30% { transform: scale(1.3) rotate(10deg); opacity: 1; }
-    70% { transform: scale(1) rotate(0deg); opacity: 1; }
-    100% { transform: scale(0.8) translateY(-40px); opacity: 0; }
-  }
-  .modal-bg {
-    position: fixed; inset: 0; background: #000a; backdrop-filter: blur(4px);
-    display: none; justify-content: center; align-items: center; z-index: 500;
-  }
-  .modal-bg.show { display: flex; }
-  .modal {
-    background: linear-gradient(160deg, #141c3f, #0d1330); border: 2px solid #4dd0ff;
-    border-radius: 18px; padding: 26px 34px; text-align: center;
-    box-shadow: 0 0 40px #4dd0ff66; animation: modalIn 0.3s ease-out; max-width: 380px;
-  }
-  @keyframes modalIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  .modal .icon { font-size: 3.5em; margin-bottom: 8px; }
-  .modal .title { font-size: 1.1em; font-weight: bold; margin-bottom: 6px; }
-  .modal .sub { font-size: 0.85em; color: #8899cc; margin-bottom: 18px; }
-  .modal button {
-    padding: 10px 30px; background: #4dd0ff; color: #0a0e27; border: none;
-    border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 0.95em;
-  }
-  .modal button:hover { background: #6ee7ff; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✨ С 8 марта! Фейерверк из сердечек ✨</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
 
-  /* Оффлайн-модалка */
-  .offline-modal {
-    background: linear-gradient(160deg, #0a1a3f, #1a0a2f);
-    border-color: #a06eff;
-    box-shadow: 0 0 50px #a06eff66;
-    min-width: 320px;
-  }
-  .offline-modal .icon {
-    font-size: 4em;
-    animation: moonFloat 3s ease-in-out infinite;
-  }
-  @keyframes moonFloat {
-    0%, 100% { transform: translateY(0) rotate(-5deg); }
-    50% { transform: translateY(-8px) rotate(5deg); }
-  }
-  .offline-reward {
-    font-size: 1.7em;
-    color: #ffd166;
-    font-weight: bold;
-    margin-top: 12px;
-    text-shadow: 0 0 15px #ffd16688;
-    animation: rewardPulse 0.8s ease-out;
-  }
-  @keyframes rewardPulse {
-    0% { transform: scale(0.5); opacity: 0; }
-    60% { transform: scale(1.15); }
-    100% { transform: scale(1); opacity: 1; }
-  }
-  .offline-time-line {
-    font-size: 0.9em;
-    color: #c8c8ff;
-    margin-top: 6px;
-  }
-  .offline-capped {
-    font-size: 0.72em;
-    color: #ff8888;
-    margin-top: 6px;
-  }
+        body {
+            background: linear-gradient(145deg, #fff9f9 0%, #ffe6f0 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 20px 10px;
+            position: relative;
+            overflow-x: hidden;
+        }
 
-  /* Ежедневные награды */
-  .daily-grid {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
-  }
-  .daily-day {
-    background: #141c3f; border: 2px solid #2a3a6c; border-radius: 10px;
-    padding: 10px 4px; text-align: center; font-size: 0.72em;
-    transition: 0.15s;
-  }
-  .daily-day .num { font-size: 0.9em; color: #8899cc; margin-bottom: 4px; }
-  .daily-day .icon { font-size: 1.6em; margin-bottom: 2px; }
-  .daily-day .reward { font-size: 0.7em; color: #ffd166; }
-  .daily-day.claimed { opacity: 0.35; border-color: #4a5a8c; }
-  .daily-day.claimed::after { content: '✓'; display: block; color: #88ffaa; font-size: 1.3em; }
-  .daily-day.today {
-    border-color: #ffd166; box-shadow: 0 0 15px #ffd16666;
-    animation: dailyPulse 1.5s infinite;
-  }
-  .daily-day.big { grid-column: span 2; background: linear-gradient(135deg, #3a1a6c, #6c2a6c); border-color: #ffd166; }
+        /* ===== ПАДАЮЩИЕ ЦВЕТЫ (фоновая анимация) ===== */
+        .flower-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
 
-  .bonus-toast {
-    position: fixed; top: 15px; left: 50%; transform: translateX(-50%);
-    background: #141c3f; border: 1px solid #ffd166; color: #ffd166;
-    padding: 8px 16px; border-radius: 10px; font-size: 0.85em; z-index: 400;
-    animation: toastIn 0.3s ease-out, toastOut 0.3s 2.5s forwards;
-    pointer-events: none; max-width: 80vw; text-align: center;
-  }
-  @keyframes toastIn { from { opacity: 0; transform: translate(-50%, -20px); } }
-  @keyframes toastOut { to { opacity: 0; transform: translate(-50%, -20px); } }
-  #reactionParticle {
-    position: fixed; font-size: 2.5em; cursor: pointer; z-index: 300;
-    animation: particlePulse 1s infinite; filter: drop-shadow(0 0 10px #ffd166);
-  }
-  @keyframes particlePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
-  .storage-warn {
-    position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
-    background: #3a2020; border: 1px solid #5c2a2a; color: #ff8888;
-    padding: 8px 14px; border-radius: 8px; font-size: 0.78em;
-    z-index: 999; max-width: 90vw; text-align: center;
-  }
-  .offline-badge {
-    position: fixed;
-    bottom: 10px; right: 10px;
-    background: #0a1a3f; border: 1px solid #a06eff;
-    color: #c8a6ff;
-    padding: 6px 12px;
-    border-radius: 10px;
-    font-size: 0.75em;
-    z-index: 100;
-    pointer-events: none;
-    animation: toastIn 0.3s ease-out;
-  }
-  @media (max-width: 850px) {
-    .game { flex-direction: column; height: auto; overflow-y: auto; }
-    .panel { width: 100%; max-height: 55vh; }
-    #atom { width: 130px; height: 130px; font-size: 2.2em; }
-    .atom-wrap { width: 170px; height: 170px; }
-    .energy { font-size: 1.8em; }
-    .daily-grid { grid-template-columns: repeat(3, 1fr); }
-  }
-</style>
+        .flower {
+            position: absolute;
+            font-size: 1.8rem;
+            opacity: 0.7;
+            user-select: none;
+            animation: fall linear infinite;
+            filter: drop-shadow(0 5px 5px #ffa5c3);
+            z-index: 0;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-20vh) rotate(0deg);
+                opacity: 0.9;
+            }
+            100% {
+                transform: translateY(100vh) rotate(300deg);
+                opacity: 0.2;
+            }
+        }
+
+        /* ===== ФЕЙЕРВЕРК ИЗ СЕРДЕЧЕК (холст) ===== */
+        #heart-fireworks-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100; /* ПОВЕРХ всего контента */
+        }
+
+        /* основной контент */
+        .container {
+            max-width: 900px;
+            width: 100%;
+            position: relative;
+            z-index: 50; /* выше фона, но ниже фейерверка (100) */
+        }
+
+        .holiday-header {
+            background: #ffffffcc;
+            backdrop-filter: blur(8px);
+            border-radius: 60px 60px 30px 30px;
+            padding: 30px 25px 25px 25px;
+            box-shadow: 0 15px 35px rgba(231, 120, 176, 0.2);
+            border: 2px solid #ffb6d9;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .holiday-header h1 {
+            font-size: 2.8rem;
+            color: #c53f7e;
+            text-shadow: 2px 2px 0 #ffe2f0;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .holiday-header p {
+            font-size: 1.3rem;
+            color: #8f4f72;
+            background: #fff0f7;
+            display: inline-block;
+            padding: 12px 30px;
+            border-radius: 50px;
+            box-shadow: inset 0 2px 5px #ffc1da;
+            margin: 10px 0 5px;
+            line-height: 1.5;
+        }
+
+        .wishes {
+            background: #ffe7f0;
+            border-radius: 40px;
+            padding: 20px;
+            margin: 15px 0 5px;
+            border: 2px dashed #ff8cb0;
+            font-size: 1.2rem;
+            color: #5e2e45;
+        }
+
+        .wishes span {
+            display: inline-block;
+            font-size: 1.8rem;
+            filter: drop-shadow(0 3px 3px #fba9c4);
+        }
+
+        .quiz-section {
+            background: #ffffffdd;
+            backdrop-filter: blur(5px);
+            border-radius: 50px;
+            padding: 25px;
+            box-shadow: 0 10px 25px #ffc1d0;
+            margin-bottom: 30px;
+        }
+
+        .quiz-title {
+            font-size: 2rem;
+            color: #b3416b;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress {
+            background: #ffd9e8;
+            height: 18px;
+            border-radius: 30px;
+            margin: 20px 0;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #f78fb4, #fb6f9e);
+            border-radius: 30px;
+            transition: width 0.3s ease;
+        }
+
+        .question-text {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #32202a;
+            margin-bottom: 25px;
+            padding: 5px 15px;
+            background: #fef2f7;
+            border-radius: 40px;
+            border: 1px solid #ffb8d2;
+        }
+
+        .answers-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .answer-btn {
+            background: #ffffff;
+            border: 2px solid #ffbfd7;
+            border-radius: 60px;
+            padding: 16px 25px;
+            font-size: 1.25rem;
+            text-align: left;
+            color: #4f2b3a;
+            font-weight: 500;
+            transition: all 0.2s;
+            cursor: pointer;
+            box-shadow: 0 4px 8px #ffe2f0;
+        }
+
+        .answer-btn:hover:not(:disabled) {
+            background: #ffe2f0;
+            border-color: #ff88b2;
+            transform: scale(1.02);
+            box-shadow: 0 8px 15px #ffc1da;
+        }
+
+        .answer-btn.selected-correct {
+            background: #d4ffd4;
+            border-color: #4caf50;
+            color: #1d471d;
+        }
+
+        .answer-btn.selected-wrong {
+            background: #ffe0e0;
+            border-color: #f44336;
+            color: #a0002a;
+            text-decoration: line-through wavy #ff7474;
+        }
+
+        .answer-btn:disabled {
+            cursor: default;
+            opacity: 0.8;
+        }
+
+        .quiz-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .counter-info {
+            font-size: 1.4rem;
+            background: #ffecf2;
+            padding: 8px 25px;
+            border-radius: 40px;
+            color: #b84b73;
+        }
+
+        .next-btn {
+            background: #ff98bb;
+            border: none;
+            border-radius: 50px;
+            padding: 14px 40px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 5px 0 #b34d72;
+            cursor: pointer;
+            transition: 0.1s linear;
+            border: 2px solid #ffcddc;
+        }
+
+        .next-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 2px 0 #b34d72;
+        }
+
+        .next-btn:disabled {
+            opacity: 0.4;
+            transform: none;
+            box-shadow: 0 5px 0 #b34d72;
+            cursor: not-allowed;
+        }
+
+        .result-message {
+            font-size: 1.8rem;
+            color: #c94178;
+            font-weight: bold;
+            margin-top: 15px;
+            padding: 15px;
+            background: #fff0f7;
+            border-radius: 50px;
+            border: 2px solid #ff9dc0;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .clicker-section {
+            background: #ffe4f0e0;
+            border-radius: 90px 90px 40px 40px;
+            padding: 25px 25px 30px;
+            border: 3px solid white;
+            box-shadow: 0 20px 30px #ffbfd0;
+            text-align: center;
+            margin-top: 30px;
+            backdrop-filter: blur(4px);
+        }
+
+        .clicker-title {
+            font-size: 1.9rem;
+            color: #c63f7b;
+            margin-bottom: 15px;
+        }
+
+        .heart-btn {
+            background: none;
+            border: none;
+            font-size: 5rem;
+            cursor: pointer;
+            transition: 0.15s;
+            filter: drop-shadow(0 10px 10px #ff90b0);
+            line-height: 1;
+        }
+
+        .heart-btn:active {
+            transform: scale(0.8);
+            filter: drop-shadow(0 5px 5px #ff4d7a);
+        }
+
+        .click-counter {
+            font-size: 2.2rem;
+            background: #ffffffb3;
+            border-radius: 60px;
+            padding: 8px 30px;
+            display: inline-block;
+            margin: 15px 0 15px 0;
+            color: #ad3f68;
+            border: 2px solid #ffa7c4;
+        }
+
+        .surprise-box {
+            min-height: 80px;
+            background: #ffddea;
+            border-radius: 70px;
+            padding: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            font-size: 2rem;
+            border: 2px solid #ffb7cf;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+            color: #b84b73;
+            font-style: italic;
+        }
+
+        .reset-surprise {
+            margin-top: 5px;
+            background: #fbc9da;
+            border: none;
+            border-radius: 40px;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            color: #5d2e44;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid white;
+            transition: 0.2s;
+            display: inline-block;
+        }
+        .reset-surprise:hover {
+            background: #ffb0cc;
+        }
+    </style>
 </head>
 <body>
-<canvas id="fxCanvas"></canvas>
+    <!-- КОНТЕЙНЕР ДЛЯ ПАДАЮЩИХ ЦВЕТОВ -->
+    <div class="flower-container" id="flowerContainer"></div>
 
-<div class="game">
-  <div class="click-area">
-    <div class="stats">
-      <div class="energy"><span id="energy">0</span> эВ</div>
-      <div class="eps" id="eps">0 эВ/сек</div>
-      <div class="bonus-line" id="bonusLine"></div>
+    <!-- ХОЛСТ ДЛЯ ФЕЙЕРВЕРКА ИЗ СЕРДЕЧЕК (ПОВЕРХ ВСЕГО) -->
+    <canvas id="heart-fireworks-canvas"></canvas>
+
+    <div class="container">
+        <!-- ШАПКА -->
+        <div class="holiday-header">
+            <h1>🌸 8 Марта 🌸</h1>
+            <p>🌺 Международный женский день изначально был днём борьбы за права женщин. Сегодня это праздник всех женщин, девушек и девочек, символ нежности, красоты и весеннего обновления. В этот день принято дарить цветы, улыбки и тёплые пожелания.</p>
+            <div class="wishes">
+               <span>🌷✨</span> Дорогие, прекрасные, удивительные!<br><br> Поздравляю вас с праздником 8 Марта! Этот день — символ пробуждения природы, нежности и той невероятной силы, которую вы дарите миру.<br><br> Пусть в вашей душе всегда цветет весна, независимо от погоды за окном. Маленьким принцессам желаем чудесных открытий, юным леди — ярких мечтаний и любви, а мудрым и прекрасным женщинам — гармонии, здоровья и тепла в доме.<br><br> Будьте счастливы, сияйте улыбками и знайте, что ваша доброта и красота делают этот мир по-настоящему живым. С праздником! <span>✨🌹</span>
+            <div style="font-size:1.8rem; margin-top:15px;">💐 🐈 🌺 🐾 🌼</div>
+        </div>
+
+        <!-- ВИКТОРИНА 30 вопросов -->
+        <div class="quiz-section">
+            <div class="quiz-title">🌹 Весенняя викторина (30 вопросов)</div>
+            <div class="progress">
+                <div class="progress-bar" id="quizProgressBar" style="width:0%;"></div>
+            </div>
+            <div id="questionContainer">
+                <div class="question-text" id="questionText">Загрузка вопроса...</div>
+                <div class="answers-grid" id="answersContainer"></div>
+            </div>
+            <div class="quiz-footer">
+                <span class="counter-info" id="questionCounter">1 / 30</span>
+                <button class="next-btn" id="nextBtn" disabled>▶ Дальше</button>
+            </div>
+            <div id="quizResultMessage" class="result-message"></div>
+        </div>
+
+        <!-- КЛИКЕР сердечко + сюрприз -->
+        <div class="clicker-section">
+            <div class="clicker-title">💗 Сердечный кликер 💗</div>
+            <button class="heart-btn" id="heartClicker">❤️</button>
+            <div class="click-counter" id="clickCounterDisplay">0 / 100</div>
+            
+            <!-- Блок сюрприза (всегда показывает "жди чуда") -->
+            <div class="surprise-box" id="surpriseBox">✨ жди чуда ✨</div>
+            
+            <!-- Кнопка на отдельной строке -->
+            <div>
+                <button class="reset-surprise" id="resetSurpriseBtn">🌸 Сбросить сюрприз 🌸</button>
+            </div>
+        </div>
     </div>
-    <div class="atom-wrap" id="atomWrap">
-      <div id="atom" class="skin-default">⚛️</div>
-    </div>
-    <div class="chest-bar">
-      <div class="label">🎁 До сундука: <span id="chestProgressText">0/50</span></div>
-      <div class="progress"><div class="progress-fill" id="chestProgress"></div></div>
-    </div>
-    <div class="hint">💥 5% крит • 🌙 Оффлайн-фарм 50% (макс 8ч) • 🎁 каждые 50 кликов</div>
-  </div>
 
-  <div class="panel">
-    <div class="tabs">
-      <div class="tab active" data-tab="upgrades">⚙️ Улучшения</div>
-      <div class="tab" data-tab="labs">🏭 Лабы</div>
-      <div class="tab" data-tab="discoveries">🔬 Открытия</div>
-      <div class="tab" data-tab="items">🎒 Инвентарь</div>
-      <div class="tab" data-tab="craft">🧪 Крафт</div>
-      <div class="tab" data-tab="skins">🎨 Скины</div>
-      <div class="tab" data-tab="prestige">⭐ Престиж</div>
-      <div class="tab" data-tab="daily">📅 День</div>
-      <div class="tab" data-tab="stats">📊 Стата</div>
-    </div>
-    <div class="content" id="content"></div>
-    <div style="display:flex; gap:6px;">
-      <button class="reset" style="flex:1" onclick="toggleSound()" id="soundBtn">🔊 Звук: вкл</button>
-      <button class="reset" style="flex:1" onclick="resetGame()">Сбросить</button>
-    </div>
-  </div>
-</div>
-
-<!-- Модалка предмета -->
-<div class="modal-bg" id="modalBg">
-  <div class="modal">
-    <div class="icon" id="modalIcon">🎁</div>
-    <div class="title" id="modalTitle">Предмет!</div>
-    <div class="sub" id="modalSub">Описание</div>
-    <button onclick="closeModal()">Забрать</button>
-  </div>
-</div>
-
-<!-- Модалка оффлайн-наград -->
-<div class="modal-bg" id="offlineModalBg">
-  <div class="modal offline-modal">
-    <div class="icon">🌙</div>
-    <div class="title" style="color:#a06eff">Пока тебя не было...</div>
-    <div class="sub">
-      <div class="offline-time-line" id="offlineTime"></div>
-      <div class="offline-reward" id="offlineReward">+0 эВ</div>
-      <div id="offlineCapped" class="offline-capped"></div>
-      <div style="font-size:0.72em;margin-top:12px;color:#8899cc;line-height:1.5;">
-        Эффективность оффлайн: <b style="color:#a06eff">50%</b><br>
-        Лимит накопления: <b style="color:#a06eff">8 часов</b>
-      </div>
-    </div>
-    <button onclick="closeOfflineModal()">Забрать</button>
-  </div>
-</div>
-
-<script>
-'use strict';
-
-// ============================================================
-// ================== БЕЗОПАСНЫЙ STORAGE ======================
-// ============================================================
-
-const STORAGE_KEY = 'physicsClickerV10';
-let storageAvailable = false;
-try {
-  const t = '__test__';
-  window.localStorage.setItem(t, t);
-  window.localStorage.removeItem(t);
-  storageAvailable = true;
-} catch(e) { storageAvailable = false; }
-
-function safeSetItem(key, value) {
-  if (!storageAvailable) return false;
-  try { window.localStorage.setItem(key, value); return true; } catch(e) { return false; }
-}
-function safeGetItem(key) {
-  if (!storageAvailable) return null;
-  try { return window.localStorage.getItem(key); } catch(e) { return null; }
-}
-function safeRemoveItem(key) {
-  if (!storageAvailable) return;
-  try { window.localStorage.removeItem(key); } catch(e) {}
-}
-
-// ============================================================
-// ================== КОНСТАНТЫ ОФФЛАЙНА ======================
-// ============================================================
-
-const MAX_OFFLINE_HOURS = 8;         // максимум 8 часов накопления
-const OFFLINE_EFFICIENCY = 0.5;      // 50% эффективности
-const MIN_OFFLINE_SECONDS = 60;      // меньше минуты — не считаем
-
-// ============================================================
-// ================== ДАННЫЕ ==================================
-// ============================================================
-
-const clickUpgrades = [
-  { id:'hands',      name:'🧤 Перчатки физика',    desc:'+1 эВ за клик',  baseCost:15,     costMult:1.15, effect:1,   count:0 },
-  { id:'magnifier',  name:'🔍 Лупа',               desc:'+2 эВ за клик',  baseCost:100,    costMult:1.18, effect:2,   count:0 },
-  { id:'laser',      name:'🔦 Лазерная указка',    desc:'+8 эВ за клик',  baseCost:1200,   costMult:1.19, effect:8,   count:0 },
-  { id:'glovesNano', name:'🧬 Нано-перчатки',      desc:'+40 эВ за клик', baseCost:15000,  costMult:1.20, effect:40,  count:0 },
-  { id:'antimatter', name:'✋ Антиматерия в руке', desc:'+250 эВ за клик',baseCost:200000, costMult:1.22, effect:250, count:0 },
-];
-
-const labs = [
-  { id:'garage',     name:'🏠 Гараж-лаборатория',    desc:'+1 эВ/сек',      baseCost:50,        costMult:1.15, effect:1,      count:0 },
-  { id:'school',     name:'🏫 Школьный кабинет',     desc:'+5 эВ/сек',      baseCost:400,       costMult:1.16, effect:5,      count:0 },
-  { id:'uni',        name:'🎓 Университетская лаба', desc:'+30 эВ/сек',     baseCost:3500,      costMult:1.17, effect:30,     count:0 },
-  { id:'institute',  name:'🏛️ НИИ',                  desc:'+150 эВ/сек',    baseCost:25000,     costMult:1.18, effect:150,    count:0 },
-  { id:'accelerator',name:'🌀 Ускоритель',           desc:'+800 эВ/сек',    baseCost:180000,    costMult:1.19, effect:800,    count:0 },
-  { id:'reactor',    name:'☢️ Ядерный реактор',      desc:'+5000 эВ/сек',   baseCost:1500000,   costMult:1.20, effect:5000,   count:0 },
-  { id:'collider',   name:'🔬 Большой коллайдер',    desc:'+30000 эВ/сек',  baseCost:12000000,  costMult:1.21, effect:30000,  count:0 },
-  { id:'quantum',    name:'⚛️ Квантовый компьютер',  desc:'+200000 эВ/сек', baseCost:100000000, costMult:1.22, effect:200000, count:0 },
-];
-
-const discoveries = [
-  { id:'newton',       name:'🍎 Закон Ньютона',       desc:'+10% к клику',                cost:500,        science:1,  icon:'🍎', effect:{ clickMult:0.10 } },
-  { id:'kepler',       name:'🪐 Законы Кеплера',       desc:'+15% к эВ/сек',               cost:2500,       science:2,  icon:'🪐', effect:{ epsMult:0.15 } },
-  { id:'ohm',          name:'⚡ Закон Ома',             desc:'+10% крит-шанс (итого 15%)',  cost:10000,      science:3,  icon:'⚡', effect:{ critChance:0.10 } },
-  { id:'thermo',       name:'🔥 Термодинамика',        desc:'+25% к эВ/сек',               cost:50000,      science:5,  icon:'🔥', effect:{ epsMult:0.25 } },
-  { id:'faraday',      name:'🧲 Закон Фарадея',        desc:'+30% к клику',                cost:250000,     science:8,  icon:'🧲', effect:{ clickMult:0.30 } },
-  { id:'maxwell',      name:'📡 Уравнения Максвелла',  desc:'+50% к эВ/сек',               cost:1000000,    science:12, icon:'📡', effect:{ epsMult:0.50 } },
-  { id:'relativity',   name:'🌌 Теория относительности',desc:'Крит ×20 вместо ×10',         cost:5000000,    science:20, icon:'🌌', effect:{ critMultAdd:1.0 } },
-  { id:'quantumMech',  name:'⚛️ Квантовая механика',   desc:'+100% ко всему',              cost:50000000,   science:30, icon:'⚛️', effect:{ clickMult:1.0, epsMult:1.0 } },
-  { id:'schrodinger',  name:'🐱 Кот Шрёдингера',       desc:'+15% крит-шанс (итого 30%)',  cost:500000000,  science:50, icon:'🐱', effect:{ critChance:0.15 } },
-  { id:'hawking',      name:'🕳️ Излучение Хокинга',     desc:'+200% ко всему',              cost:5000000000, science:80, icon:'🕳️', effect:{ clickMult:2.0, epsMult:2.0 } },
-  { id:'theoryOfAll',  name:'🌠 Теория всего',          desc:'+500% ко всему, крит ×50',    cost:5e11,       science:150,icon:'🌠', effect:{ clickMult:5.0, epsMult:5.0, critMultAdd:2.5 } },
-];
-
-const itemPool = [
-  { id:'bat',      name:'🔋 Батарейка',       desc:'+0.5 эВ/сек',           rarity:'common', weight:20, effect:{ flatEps:0.5 } },
-  { id:'coffee',   name:'☕ Кофе',             desc:'+1 эВ за клик',         rarity:'common', weight:15, effect:{ flatClick:1 } },
-  { id:'pen',      name:'🖊️ Ручка физика',     desc:'+0.3 эВ/сек',           rarity:'common', weight:15, effect:{ flatEps:0.3 } },
-  { id:'magnet',   name:'🧲 Магнитик',         desc:'+0.2 эВ/сек, +0.5 клик',rarity:'common', weight:10, effect:{ flatEps:0.2, flatClick:0.5 } },
-  { id:'chip',     name:'💾 Чип-ускоритель',   desc:'+5 эВ/сек',             rarity:'rare',   weight:8,  effect:{ flatEps:5 } },
-  { id:'lens',     name:'🔎 Точная линза',     desc:'+3 эВ за клик',         rarity:'rare',   weight:7,  effect:{ flatClick:3 } },
-  { id:'turbo',    name:'⚡ Турбо-ускоритель', desc:'×2 к эВ/сек 30с',       rarity:'rare',   weight:6,  effect:{ tempEps:1.0, ms:30000 } },
-  { id:'solar',    name:'☀️ Солнечная панель', desc:'+15 эВ/сек',            rarity:'rare',   weight:5,  effect:{ flatEps:15 } },
-  { id:'crystal',  name:'💎 Энергокристалл',   desc:'+50 эВ/сек',            rarity:'epic',   weight:4,  effect:{ flatEps:50 } },
-  { id:'plasma',   name:'🔥 Плазменный шар',   desc:'+20 эВ за клик',        rarity:'epic',   weight:3,  effect:{ flatClick:20 } },
-  { id:'core',     name:'🌟 Ядро реактора',    desc:'×3 ко всему 20с',       rarity:'epic',   weight:3,  effect:{ tempEps:2.0, tempClick:2.0, ms:20000 } },
-  { id:'nobel',    name:'🏅 Нобелевка',        desc:'+500 эВ/сек',           rarity:'legend', weight:2,  effect:{ flatEps:500 } },
-  { id:'theory',   name:'📜 Теория всего',     desc:'+1000 эВ/сек, +100 клик',rarity:'legend',weight:1,  effect:{ flatEps:1000, flatClick:100 } },
-];
-
-const craftRecipes = [
-  { from:'bat',     to:'chip',    name:'🔋×3 → 💾 Чип-ускоритель' },
-  { from:'coffee',  to:'lens',    name:'☕×3 → 🔎 Точная линза' },
-  { from:'chip',    to:'crystal', name:'💾×3 → 💎 Энергокристалл' },
-  { from:'lens',    to:'plasma',  name:'🔎×3 → 🔥 Плазменный шар' },
-  { from:'crystal', to:'nobel',   name:'💎×3 → 🏅 Нобелевка' },
-  { from:'plasma',  to:'theory',  name:'🔥×3 → 📜 Теория всего' },
-];
-
-const skins = [
-  { id:'default', name:'🌌 Классика',  cost:0,       cls:'skin-default', desc:'Стандартный атом' },
-  { id:'fire',    name:'🔥 Огонь',      cost:5000,    cls:'skin-fire',    desc:'Раскалённая плазма' },
-  { id:'ice',     name:'❄️ Лёд',        cost:25000,   cls:'skin-ice',     desc:'Абсолютный ноль' },
-  { id:'quantum', name:'🔮 Квант',      cost:150000,  cls:'skin-quantum', desc:'Суперпозиция' },
-  { id:'gold',    name:'👑 Золото',     cost:1000000, cls:'skin-gold',    desc:'Для нобелевских лауреатов' },
-];
-
-const chestTypes = [
-  { id:'wood',  name:'📦 Деревянный', minClicks:0,   luckBonus:0,   rareBoost:1.0,  color:'#8B6F47' },
-  { id:'iron',  name:'🎁 Железный',   minClicks:100, luckBonus:0.1, rareBoost:1.3,  color:'#A8B8C8' },
-  { id:'gold',  name:'🏆 Золотой',    minClicks:300, luckBonus:0.2, rareBoost:1.8,  color:'#FFD166' },
-  { id:'quant', name:'💠 Квантовый',  minClicks:700, luckBonus:0.4, rareBoost:3.0,  color:'#C08EFF' },
-];
-
-const dailyRewards = [
-  { icon:'⚡', reward:'×2 на 60с',  apply:() => addTemp('eps', 1.0, 60000) },
-  { icon:'💥', reward:'×2 крит 60с',apply:() => addTempCrit(1.0, 60000) },
-  { icon:'🎁', reward:'Сундук',      apply:() => setTimeout(openChest, 300) },
-  { icon:'💰', reward:'1000 эВ',     apply:() => { energy += 1000; totalEarned += 1000; } },
-  { icon:'📈', reward:'+50% эВ/сек', apply:() => addTemp('eps', 0.5, 120000) },
-  { icon:'💎', reward:'5000 эВ',     apply:() => { energy += 5000; totalEarned += 5000; } },
-  { icon:'🏆', reward:'ЛЕГЕНДАРНЫЙ СУНДУК', apply:() => openLegendaryChest(), big:true },
-];
-
-const CHEST_THRESHOLD = 50;
-const CRIT_BASE_CHANCE = 0.05;
-const CRIT_BASE_MULT = 10;
-
-// ============================================================
-// ================== СОСТОЯНИЕ ===============================
-// ============================================================
-
-let energy = 0;
-let totalClicks = 0;
-let chestClicks = 0;
-let chestsOpened = 0;
-let totalEarned = 0;
-let totalCrits = 0;
-let prestigePoints = 0;
-let currentSkin = 'default';
-let unlockedSkins = ['default'];
-let soundEnabled = true;
-let playStart = Date.now();
-
-let flatBonus = { eps: 0, click: 0 };
-let pctBonus  = { eps: 0, click: 0 };
-let tempBonus = [];
-let tempCritBonus = [];
-let inventory = {};
-let discovered = {};
-let sciencePoints = 0;
-
-let dailyStreak = 0;
-let lastDailyClaim = 0;
-let dailyClaimedToday = false;
-
-// Оффлайн
-let lastOnlineTime = 0;              // timestamp последнего сохранения
-let totalOfflineEarned = 0;          // всего заработано оффлайн
-let offlineSessionsCount = 0;        // сколько раз приходил с оффлайном
-
-// ============================================================
-// ================== ЗВУК ====================================
-// ============================================================
-
-let audioCtx = null;
-function initAudio() {
-  if (!audioCtx) {
-    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
-  }
-}
-function beep(freq = 440, dur = 0.08, type = 'square', vol = 0.05) {
-  if (!soundEnabled || !audioCtx) return;
-  try {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = type; osc.frequency.value = freq;
-    gain.gain.value = vol;
-    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
-    osc.connect(gain).connect(audioCtx.destination);
-    osc.start(); osc.stop(audioCtx.currentTime + dur);
-  } catch(e) {}
-}
-function sfxSplit()   { beep(200, 0.06, 'sawtooth', 0.04); setTimeout(()=>beep(900,0.04,'square',0.02), 30); }
-function sfxCrit()    { beep(1200, 0.08, 'square', 0.08); setTimeout(()=>beep(1600,0.12,'sine',0.1), 40); setTimeout(()=>beep(2000,0.15,'sine',0.08), 100); }
-function sfxBuy()     { beep(400, 0.08, 'sine', 0.06); setTimeout(()=>beep(700,0.08,'sine',0.06), 60); }
-function sfxChest()   { beep(300,0.1,'sawtooth',0.05); setTimeout(()=>beep(500,0.1,'sawtooth',0.05),80); setTimeout(()=>beep(800,0.15,'sawtooth',0.05),160); }
-function sfxLegend()  { [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,0.15,'sine',0.07), i*100)); }
-function sfxReaction(){ beep(1200,0.1,'sine',0.08); }
-function sfxPrestige(){ [300,400,500,700,900].forEach((f,i)=>setTimeout(()=>beep(f,0.2,'sine',0.07), i*120)); }
-function sfxDiscovery(){ [600,800,1000,1300].forEach((f,i)=>setTimeout(()=>beep(f,0.12,'triangle',0.08), i*80)); }
-function sfxDaily()   { [700,900,1100,1400].forEach((f,i)=>setTimeout(()=>beep(f,0.15,'sine',0.08), i*100)); }
-function sfxOffline() { [400,600,800,1000,1300].forEach((f,i)=>setTimeout(()=>beep(f,0.18,'sine',0.08), i*110)); }
-function vibrate(ms)  { if (navigator.vibrate) navigator.vibrate(ms); }
-function toggleSound() {
-  soundEnabled = !soundEnabled;
-  document.getElementById('soundBtn').textContent = soundEnabled ? '🔊 Звук: вкл' : '🔇 Звук: выкл';
-  if (soundEnabled) { initAudio(); beep(700, 0.05); }
-  save();
-}
-
-// ============================================================
-// ================== СОХРАНЕНИЕ ==============================
-// ============================================================
-
-function save() {
-  const data = {
-    energy, totalClicks, chestClicks, chestsOpened, totalEarned, totalCrits,
-    prestigePoints, currentSkin, unlockedSkins, soundEnabled, playStart,
-    flatBonus, pctBonus, inventory, discovered, sciencePoints,
-    dailyStreak, lastDailyClaim, dailyClaimedToday,
-    lastOnlineTime, totalOfflineEarned, offlineSessionsCount,
-    clickCounts: clickUpgrades.map(u => u.count),
-    labCounts: labs.map(l => l.count),
-  };
-  safeSetItem(STORAGE_KEY, JSON.stringify(data));
-}
-
-function load() {
-  const raw = safeGetItem(STORAGE_KEY);
-  if (!raw) return;
-  try {
-    const d = JSON.parse(raw);
-    energy = d.energy || 0;
-    totalClicks = d.totalClicks || 0;
-    chestClicks = d.chestClicks || 0;
-    chestsOpened = d.chestsOpened || 0;
-    totalEarned = d.totalEarned || 0;
-    totalCrits = d.totalCrits || 0;
-    prestigePoints = d.prestigePoints || 0;
-    currentSkin = d.currentSkin || 'default';
-    unlockedSkins = d.unlockedSkins || ['default'];
-    soundEnabled = d.soundEnabled !== false;
-    playStart = d.playStart || Date.now();
-    flatBonus = d.flatBonus || { eps:0, click:0 };
-    pctBonus  = d.pctBonus  || { eps:0, click:0 };
-    inventory = d.inventory || {};
-    discovered = d.discovered || {};
-    sciencePoints = d.sciencePoints || 0;
-    dailyStreak = d.dailyStreak || 0;
-    lastDailyClaim = d.lastDailyClaim || 0;
-    dailyClaimedToday = d.dailyClaimedToday || false;
-    lastOnlineTime = d.lastOnlineTime || 0;
-    totalOfflineEarned = d.totalOfflineEarned || 0;
-    offlineSessionsCount = d.offlineSessionsCount || 0;
-    (d.clickCounts || []).forEach((c,i) => { if (clickUpgrades[i]) clickUpgrades[i].count = c; });
-    (d.labCounts || []).forEach((c,i) => { if (labs[i]) labs[i].count = c; });
-  } catch(e) {}
-}
-
-// ============================================================
-// ================== ОФФЛАЙН-ФАРМ ============================
-// ============================================================
-
-function fmtOfflineTime(sec) {
-  if (sec < 60) return `${Math.floor(sec)} сек`;
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} мин`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  if (h < 24) return `${h}ч ${m}м`;
-  const d = Math.floor(h / 24);
-  const hh = h % 24;
-  return `${d}д ${hh}ч`;
-}
-
-// Начисляем оффлайн-награду
-// showModal: показывать ли большую модалку (только при загрузке)
-function giveOfflineReward(offlineSec, showModal = false) {
-  if (offlineSec < MIN_OFFLINE_SECONDS) return false;
-
-  const eps = getEPS();
-  if (eps <= 0) return false;
-
-  const wasCapped = offlineSec > MAX_OFFLINE_HOURS * 3600;
-  const cappedSec = Math.min(offlineSec, MAX_OFFLINE_HOURS * 3600);
-  const earned = eps * cappedSec * OFFLINE_EFFICIENCY;
-
-  if (earned < 1) return false;
-
-  energy += earned;
-  totalEarned += earned;
-  totalOfflineEarned += earned;
-  offlineSessionsCount++;
-
-  if (showModal) {
-    showOfflineModal(offlineSec, cappedSec, earned, wasCapped);
-    sfxOffline();
-    vibrate([80, 40, 80, 40, 120]);
-  } else {
-    showToast(`🌙 Пока тебя не было: +${fmt(earned)} эВ`);
-    spawnParticles(innerWidth / 2, innerHeight / 2, 30, '#a06eff');
-  }
-  return true;
-}
-
-function showOfflineModal(realSec, cappedSec, earned, wasCapped) {
-  document.getElementById('offlineTime').innerHTML =
-    `Тебя не было: <b style="color:#c8a6ff">${fmtOfflineTime(realSec)}</b>`;
-  document.getElementById('offlineReward').textContent = '+' + fmt(earned) + ' эВ';
-  const capped = document.getElementById('offlineCapped');
-  if (wasCapped) {
-    capped.textContent = `⚠️ Накоплено максимум за ${MAX_OFFLINE_HOURS} ч (лимит)`;
-  } else {
-    capped.textContent = '';
-  }
-  document.getElementById('offlineModalBg').classList.add('show');
-}
-
-function closeOfflineModal() {
-  document.getElementById('offlineModalBg').classList.remove('show');
-  renderContent();
-  updateStatsUI();
-}
-
-// ============================================================
-// ================== БОНУСЫ ==================================
-// ============================================================
-
-function addTemp(stat, value, ms) {
-  tempBonus.push({ stat, value, endsAt: Date.now() + ms });
-}
-function addTempCrit(value, ms) {
-  tempCritBonus.push({ value, endsAt: Date.now() + ms });
-}
-
-function applyItemEffect(effect) {
-  if (effect.flatEps)   flatBonus.eps   += effect.flatEps;
-  if (effect.flatClick) flatBonus.click += effect.flatClick;
-  if (effect.pctEps)    pctBonus.eps    += effect.pctEps;
-  if (effect.pctClick)  pctBonus.click  += effect.pctClick;
-  if (effect.tempEps)   addTemp('eps',   effect.tempEps,   effect.ms || 20000);
-  if (effect.tempClick) addTemp('click', effect.tempClick, effect.ms || 20000);
-}
-
-function getDiscoveryBonuses() {
-  let clickMult = 0, epsMult = 0;
-  let critChance = 0, critMultAdd = 0;
-  discoveries.forEach(d => {
-    if (!discovered[d.id]) return;
-    const e = d.effect;
-    if (e.clickMult)   clickMult   += e.clickMult;
-    if (e.epsMult)     epsMult     += e.epsMult;
-    if (e.critChance)  critChance  += e.critChance;
-    if (e.critMultAdd) critMultAdd += e.critMultAdd;
-  });
-  return { clickMult, epsMult, critChance, critMultAdd };
-}
-
-function getCritChance() {
-  let chance = CRIT_BASE_CHANCE + getDiscoveryBonuses().critChance;
-  const now = Date.now();
-  tempCritBonus = tempCritBonus.filter(t => t.endsAt > now);
-  tempCritBonus.forEach(t => { chance += t.value * 0.10; });
-  return Math.min(chance, 0.9);
-}
-function getCritMult() {
-  return CRIT_BASE_MULT + getDiscoveryBonuses().critMultAdd;
-}
-
-function getMultipliers() {
-  const disc = getDiscoveryBonuses();
-  let epsMult   = 1 + pctBonus.eps   + disc.epsMult;
-  let clickMult = 1 + pctBonus.click + disc.clickMult;
-  const now = Date.now();
-  tempBonus = tempBonus.filter(t => t.endsAt > now);
-  tempBonus.forEach(t => {
-    if (t.stat === 'eps')   epsMult   *= (1 + t.value);
-    if (t.stat === 'click') clickMult *= (1 + t.value);
-  });
-  const prestigeMult = 1 + prestigePoints * 0.10;
-  return { epsMult: epsMult * prestigeMult, clickMult: clickMult * prestigeMult };
-}
-
-// ============================================================
-// ================== РАСЧЁТЫ =================================
-// ============================================================
-
-function getBaseEPS() {
-  let fromLabs = 0;
-  labs.forEach(l => { fromLabs += l.effect * l.count; });
-  return fromLabs + flatBonus.eps;
-}
-function getBaseClick() {
-  let fromUpgrades = 1;
-  clickUpgrades.forEach(u => { fromUpgrades += u.effect * u.count; });
-  return fromUpgrades + flatBonus.click;
-}
-function getEPS() {
-  return getBaseEPS() * getMultipliers().epsMult;
-}
-function getClickPower() {
-  return getBaseClick() * getMultipliers().clickMult;
-}
-function getCost(u) { return Math.floor(u.baseCost * Math.pow(u.costMult, u.count)); }
-function getPrestigeGain() { return Math.floor(Math.sqrt(totalEarned / 1e6)); }
-
-function fmt(n) {
-  if (!isFinite(n) || isNaN(n)) return '0';
-  if (n < 1) return n.toFixed(2);
-  if (n < 1000) return n < 10 ? n.toFixed(1) : Math.floor(n).toString();
-  if (n < 1e6) return (n/1e3).toFixed(2)+'K';
-  if (n < 1e9) return (n/1e6).toFixed(2)+'M';
-  if (n < 1e12) return (n/1e9).toFixed(2)+'B';
-  if (n < 1e15) return (n/1e12).toFixed(2)+'T';
-  if (n < 1e18) return (n/1e15).toFixed(2)+'Q';
-  return (n/1e18).toFixed(2)+'Qi';
-}
-function fmtTime(ms) {
-  const s = Math.floor(ms/1000);
-  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
-  return `${h}ч ${m}м ${sec}с`;
-}
-
-// ============================================================
-// ================== ЭФФЕКТЫ =================================
-// ============================================================
-
-const fxCanvas = document.getElementById('fxCanvas');
-const fxCtx = fxCanvas.getContext('2d');
-let particles = [];
-let lastFrameTime = performance.now();
-
-function resizeCanvas() { fxCanvas.width = innerWidth; fxCanvas.height = innerHeight; }
-resizeCanvas();
-addEventListener('resize', resizeCanvas);
-
-function getSkinColor() {
-  switch(currentSkin) {
-    case 'fire':    return '#ff8844';
-    case 'ice':     return '#88ddff';
-    case 'quantum': return '#cc88ff';
-    case 'gold':    return '#ffd166';
-    default:        return '#4dd0ff';
-  }
-}
-
-function spawnParticles(x, y, count = 8, forceColor = null) {
-  const color = forceColor || getSkinColor();
-  for (let i = 0; i < count; i++) {
-    const a = Math.random() * Math.PI * 2, sp = 1 + Math.random() * 4;
-    particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp - 1,
-      life: 1, decay: 0.02 + Math.random()*0.02, size: 2 + Math.random()*3, color });
-  }
-}
-
-function updateParticles(dt) {
-  fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i];
-    p.x += p.vx*dt*60; p.y += p.vy*dt*60; p.vy += 0.2; p.vx *= 0.98;
-    p.life -= p.decay*dt*60;
-    if (p.life <= 0) { particles.splice(i,1); continue; }
-    fxCtx.globalAlpha = p.life;
-    fxCtx.fillStyle = p.color;
-    fxCtx.shadowBlur = 15; fxCtx.shadowColor = p.color;
-    fxCtx.beginPath(); fxCtx.arc(p.x, p.y, p.size*p.life, 0, Math.PI*2); fxCtx.fill();
-  }
-  fxCtx.globalAlpha = 1; fxCtx.shadowBlur = 0;
-}
-
-// ============================================================
-// ================== АНИМАЦИЯ РАСЩЕПЛЕНИЯ ====================
-// ============================================================
-
-const atomWrap = document.getElementById('atomWrap');
-
-function animateNucleusSplit(isCrit = false) {
-  const color = isCrit ? '#ffd166' : getSkinColor();
-
-  const wave = document.createElement('div');
-  wave.className = 'shockwave' + (isCrit ? ' crit' : '');
-  wave.style.borderColor = color;
-  atomWrap.appendChild(wave);
-  setTimeout(() => wave.remove(), 500);
-
-  const fragCount = isCrit ? 12 : (6 + Math.floor(Math.random() * 5));
-  for (let i = 0; i < fragCount; i++) {
-    const frag = document.createElement('div');
-    frag.className = 'nucleus-frag';
-    const angle = (Math.PI*2*i/fragCount) + (Math.random()-0.5)*0.6;
-    const dist = (isCrit ? 100 : 70) + Math.random()*60;
-    frag.style.setProperty('--dx', Math.cos(angle)*dist + 'px');
-    frag.style.setProperty('--dy', Math.sin(angle)*dist + 'px');
-    frag.style.background = color;
-    frag.style.color = color;
-    const sz = (isCrit ? 8 : 5) + Math.random()*6;
-    frag.style.width = sz + 'px'; frag.style.height = sz + 'px';
-    frag.style.marginLeft = -(sz/2)+'px'; frag.style.marginTop = -(sz/2)+'px';
-    frag.style.animationDelay = (Math.random()*0.05)+'s';
-    atomWrap.appendChild(frag);
-    setTimeout(() => frag.remove(), 800);
-  }
-
-  atom.style.transition = 'transform 0.05s';
-  atom.style.transform = isCrit ? 'scale(0.7) rotate(15deg)' : 'scale(0.85) rotate(8deg)';
-  setTimeout(() => { atom.style.transform = isCrit ? 'scale(1.15) rotate(-8deg)' : 'scale(1.05) rotate(-5deg)'; }, 60);
-  setTimeout(() => { atom.style.transform = ''; }, 130);
-
-  if (isCrit) {
-    atomWrap.classList.add('crit-shake');
-    setTimeout(() => atomWrap.classList.remove('crit-shake'), 400);
-  }
-}
-
-// ============================================================
-// ================== КЛИК ====================================
-// ============================================================
-
-const atom = document.getElementById('atom');
-
-atom.addEventListener('click', (e) => {
-  initAudio();
-  const isCrit = Math.random() < getCritChance();
-  const base = getClickPower();
-  const gain = isCrit ? base * getCritMult() : base;
-
-  energy += gain;
-  totalEarned += gain;
-  totalClicks++;
-  chestClicks++;
-  if (isCrit) totalCrits++;
-
-  if (isCrit) {
-    spawnFloat(e.clientX, e.clientY, '💥 КРИТ ×' + getCritMult() + '! +' + fmt(gain), true);
-    spawnParticles(e.clientX, e.clientY, 25, '#ffd166');
-    sfxCrit();
-    vibrate([30, 30, 30]);
-    document.body.classList.add('crit-flash');
-    setTimeout(() => document.body.classList.remove('crit-flash'), 180);
-  } else {
-    spawnFloat(e.clientX, e.clientY, '+' + fmt(gain), false);
-    spawnParticles(e.clientX, e.clientY, 6);
-    sfxSplit();
-    vibrate(12);
-  }
-
-  animateNucleusSplit(isCrit);
-
-  if (chestClicks >= CHEST_THRESHOLD) {
-    chestClicks = 0;
-    dropChest(e.clientX, e.clientY);
-  }
-  updateStatsUI();
-  updateShopValues();
-});
-
-function spawnFloat(x, y, text, isCrit) {
-  const el = document.createElement('div');
-  el.className = 'float' + (isCrit ? ' crit' : '');
-  el.textContent = text;
-  el.style.left = (x-30)+'px';
-  el.style.top = (y-20)+'px';
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), isCrit ? 1200 : 900);
-}
-
-// ============================================================
-// ================== СУНДУКИ =================================
-// ============================================================
-
-function getChestType() {
-  let type = chestTypes[0];
-  for (const t of chestTypes) if (totalClicks >= t.minClicks) type = t;
-  return type;
-}
-
-function dropChest(x, y) {
-  const chest = document.createElement('div');
-  chest.className = 'chest-fly';
-  chest.textContent = getChestType().name.split(' ')[0];
-  chest.style.left = (x-20)+'px';
-  chest.style.top = (y-20)+'px';
-  document.body.appendChild(chest);
-  setTimeout(() => chest.remove(), 1200);
-  setTimeout(() => openChest(), 500);
-  sfxChest();
-  vibrate([30, 50, 30]);
-}
-
-function pickItem(luckBonus = 0, rareBoost = 1, forceLegendary = false) {
-  if (forceLegendary) {
-    const legendaries = itemPool.filter(i => i.rarity === 'legend');
-    if (legendaries.length) return legendaries[Math.floor(Math.random() * legendaries.length)];
-  }
-  const weights = itemPool.map(item => {
-    const base = item.weight;
-    if (item.rarity === 'common') return base * (1 - luckBonus);
-    return base * rareBoost * (1 + luckBonus);
-  });
-  const total = weights.reduce((a,b) => a+b, 0);
-  let r = Math.random() * total;
-  for (let i = 0; i < itemPool.length; i++) {
-    r -= weights[i];
-    if (r <= 0) return itemPool[i];
-  }
-  return itemPool[0];
-}
-
-function openChest(forceLegendary = false) {
-  const chest = getChestType();
-  const item = pickItem(chest.luckBonus, chest.rareBoost, forceLegendary);
-
-  applyItemEffect(item.effect);
-  inventory[item.id] = (inventory[item.id] || 0) + 1;
-  chestsOpened++;
-
-  if (item.rarity === 'legend') sfxLegend();
-  vibrate([50, 30, 50]);
-
-  save();
-  showItemModal(item, chest);
-  renderContent();
-}
-
-function openLegendaryChest() {
-  const item = pickItem(0, 1, true);
-  applyItemEffect(item.effect);
-  inventory[item.id] = (inventory[item.id] || 0) + 1;
-  chestsOpened++;
-  sfxLegend();
-  vibrate([80, 40, 80, 40, 150]);
-  save();
-  showItemModal(item, { name: '🏆 Легендарный сундук' });
-  renderContent();
-}
-
-const rarityNames = { common:'Обычный', rare:'Редкий', epic:'Эпический', legend:'ЛЕГЕНДАРНЫЙ' };
-const rarityColors = { common:'#8899cc', rare:'#4dd0ff', epic:'#a06eff', legend:'#ffd166' };
-
-function showItemModal(item, chest) {
-  document.getElementById('modalIcon').textContent = item.name.split(' ')[0];
-  document.getElementById('modalTitle').textContent = item.name.slice(item.name.indexOf(' ')+1);
-  document.getElementById('modalTitle').style.color = rarityColors[item.rarity];
-  document.getElementById('modalSub').innerHTML =
-    `<b style="color:${rarityColors[item.rarity]}">[${rarityNames[item.rarity]}]</b>` +
-    (chest ? ` <span style="color:#667799">из ${chest.name}</span>` : '') +
-    `<br>${item.desc}`;
-  document.getElementById('modalBg').classList.add('show');
-}
-function closeModal() { document.getElementById('modalBg').classList.remove('show'); }
-
-// ============================================================
-// ================== РЕАКЦИЯ =================================
-// ============================================================
-
-let reactionParticle = null;
-let reactionTimer = null;
-
-function scheduleReaction() {
-  clearTimeout(reactionTimer);
-  reactionTimer = setTimeout(showReaction, 45000 + Math.random() * 45000);
-}
-
-function showReaction() {
-  if (reactionParticle || document.getElementById('modalBg').classList.contains('show') ||
-      document.getElementById('offlineModalBg').classList.contains('show')) {
-    scheduleReaction(); return;
-  }
-  const p = document.createElement('div');
-  p.id = 'reactionParticle';
-  p.textContent = '🎯';
-  p.style.left = (50 + Math.random() * (innerWidth - 150)) + 'px';
-  p.style.top  = (80 + Math.random() * (innerHeight - 200)) + 'px';
-  p.style.color = getSkinColor();
-  document.body.appendChild(p);
-  reactionParticle = p;
-  sfxReaction();
-
-  const timeout = setTimeout(() => {
-    if (reactionParticle === p) {
-      p.remove(); reactionParticle = null;
-      showToast('💨 Не успел! Частица улетела');
-      scheduleReaction();
-    }
-  }, 2000);
-
-  p.addEventListener('click', (e) => {
-    e.stopPropagation();
-    clearTimeout(timeout);
-    if (reactionParticle !== p) return;
-    const reward = Math.max(getEPS() * 20, getClickPower() * 50, 100);
-    energy += reward; totalEarned += reward;
-    spawnFloat(e.clientX, e.clientY, '🎯 +' + fmt(reward), false);
-    spawnParticles(e.clientX, e.clientY, 25);
-    showToast('⚡ Реакция! +' + fmt(reward) + ' эВ');
-    vibrate(100); sfxLegend();
-    p.remove(); reactionParticle = null;
-    updateStatsUI();
-    scheduleReaction();
-  });
-}
-
-// ============================================================
-// ================== КРАФТ ===================================
-// ============================================================
-
-function craft(recipeIndex) {
-  const r = craftRecipes[recipeIndex];
-  if (!r) return;
-  if ((inventory[r.from] || 0) < 3) return;
-  inventory[r.from] -= 3;
-  if (inventory[r.from] === 0) delete inventory[r.from];
-
-  const toItem = itemPool.find(i => i.id === r.to);
-  if (!toItem) return;
-
-  inventory[r.to] = (inventory[r.to] || 0) + 1;
-  applyItemEffect(toItem.effect);
-
-  showToast(`🧪 Скрафчено: ${toItem.name}`);
-  sfxBuy(); vibrate(60); save();
-  renderContent();
-}
-
-// ============================================================
-// ================== ОТКРЫТИЯ ================================
-// ============================================================
-
-function unlockDiscovery(id) {
-  const d = discoveries.find(x => x.id === id);
-  if (!d || discovered[id]) return;
-  if (energy < d.cost) { showToast('⚠️ Не хватает эВ'); return; }
-  if (sciencePoints < d.science) { showToast('⚠️ Не хватает очков науки'); return; }
-  energy -= d.cost;
-  sciencePoints -= d.science;
-  discovered[id] = true;
-  sfxDiscovery();
-  vibrate([50, 30, 100]);
-  showToast(`🔬 Открытие: ${d.name}!`);
-  save();
-  renderContent();
-  updateStatsUI();
-}
-
-// ============================================================
-// ================== ЕЖЕДНЕВНЫЕ ==============================
-// ============================================================
-
-function canClaimDaily() {
-  if (dailyClaimedToday) return false;
-  const now = Date.now();
-  if (lastDailyClaim === 0) return true;
-  const lastDate = new Date(lastDailyClaim);
-  const nowDate = new Date(now);
-  if (lastDate.toDateString() !== nowDate.toDateString()) return true;
-  return false;
-}
-
-function checkStreak() {
-  if (lastDailyClaim === 0) return;
-  const now = Date.now();
-  const diffDays = Math.floor((now - lastDailyClaim) / (1000 * 60 * 60 * 24));
-  if (diffDays >= 2) dailyStreak = 0;
-}
-
-function claimDaily() {
-  if (!canClaimDaily()) return;
-  checkStreak();
-  const dayIndex = dailyStreak % 7;
-  const reward = dailyRewards[dayIndex];
-  reward.apply();
-  dailyStreak++;
-  lastDailyClaim = Date.now();
-  dailyClaimedToday = true;
-  sfxDaily();
-  vibrate([60, 40, 60, 40, 120]);
-  showToast(`📅 День ${dailyStreak}: ${reward.reward}!`);
-  save();
-  renderContent();
-  updateStatsUI();
-  updateDailyTabAlert();
-}
-
-function updateDailyTabAlert() {
-  const dailyTab = document.querySelector('.tab[data-tab="daily"]');
-  if (!dailyTab) return;
-  if (canClaimDaily()) dailyTab.classList.add('daily-alert');
-  else dailyTab.classList.remove('daily-alert');
-}
-
-// ============================================================
-// ================== ПРЕСТИЖ =================================
-// ============================================================
-
-function doPrestige() {
-  const gain = getPrestigeGain();
-  if (gain <= 0) { showToast('⚠️ Нужно заработать хотя бы 1M эВ'); return; }
-  if (!confirm(`Переродиться?\nПолучишь ${gain} ⭐ Тёмной энергии.\n\nВсё остальное сбросится.`)) return;
-
-  prestigePoints += gain;
-  energy = 0; totalClicks = 0; chestClicks = 0; totalEarned = 0;
-  flatBonus = { eps:0, click:0 };
-  pctBonus  = { eps:0, click:0 };
-  tempBonus = [];
-  tempCritBonus = [];
-  inventory = {};
-  clickUpgrades.forEach(u => u.count = 0);
-  labs.forEach(l => l.count = 0);
-
-  sfxPrestige(); vibrate([100,50,100,50,200]);
-  showToast(`⭐ Престиж! +${gain} Тёмной энергии`);
-  save();
-  renderContent();
-  updateStatsUI();
-}
-
-// ============================================================
-// ================== ПОКУПКИ =================================
-// ============================================================
-
-function buyClickUpgrade(i) {
-  const u = clickUpgrades[i]; if (!u) return;
-  const cost = getCost(u);
-  if (energy < cost) { showToast('⚠️ Не хватает эВ'); return; }
-  energy -= cost; u.count++;
-  sfxBuy(); vibrate(20);
-  renderContent(); updateStatsUI();
-}
-
-function buyLab(i) {
-  const l = labs[i]; if (!l) return;
-  const cost = getCost(l);
-  if (energy < cost) { showToast('⚠️ Не хватает эВ'); return; }
-  energy -= cost; l.count++;
-  sfxBuy(); vibrate(20);
-  renderContent(); updateStatsUI();
-}
-
-function buySkin(skinId) {
-  const skin = skins.find(s => s.id === skinId); if (!skin) return;
-  if (unlockedSkins.includes(skinId)) { selectSkin(skinId); return; }
-  if (energy < skin.cost) { showToast('⚠️ Не хватает эВ'); return; }
-  energy -= skin.cost;
-  unlockedSkins.push(skinId);
-  currentSkin = skinId;
-  sfxBuy(); vibrate(50); save();
-  renderContent(); updateStatsUI();
-}
-
-function selectSkin(skinId) {
-  if (!unlockedSkins.includes(skinId)) return;
-  currentSkin = skinId;
-  sfxBuy(); save();
-  renderContent(); updateStatsUI();
-}
-
-function buyScience() {
-  const cost = Math.max(1000, Math.floor(Math.pow(sciencePoints + 1, 1.5) * 2000));
-  if (energy < cost) { showToast('⚠️ Не хватает эВ'); return; }
-  energy -= cost;
-  sciencePoints++;
-  sfxBuy(); vibrate(40);
-  showToast('🔬 +1 очко науки');
-  save();
-  renderContent(); updateStatsUI();
-}
-
-// ============================================================
-// ================== ИНТЕРФЕЙС ===============================
-// ============================================================
-
-let currentTab = 'upgrades';
-const contentEl = document.getElementById('content');
-
-document.querySelectorAll('.tab').forEach(t => {
-  t.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-    currentTab = t.dataset.tab;
-    renderContent();
-  });
-});
-
-contentEl.addEventListener('click', (e) => {
-  const item = e.target.closest('.item');
-  if (!item) return;
-  if (item.classList.contains('no-click')) return;
-  if (item.classList.contains('locked')) return;
-  const action = item.dataset.action;
-  if (!action) return;
-
-  switch(action) {
-    case 'buyUpgrade':  { const i = +item.dataset.idx; if (!isNaN(i)) buyClickUpgrade(i); break; }
-    case 'buyLab':      { const i = +item.dataset.idx; if (!isNaN(i)) buyLab(i); break; }
-    case 'craft':       { const i = +item.dataset.idx; if (!isNaN(i)) craft(i); break; }
-    case 'buySkin':     { if (item.dataset.skin) buySkin(item.dataset.skin); break; }
-    case 'selectSkin':  { if (item.dataset.skin) selectSkin(item.dataset.skin); break; }
-    case 'prestige':    { doPrestige(); break; }
-    case 'discovery':   { if (item.dataset.id) unlockDiscovery(item.dataset.id); break; }
-    case 'claimDaily':  { claimDaily(); break; }
-    case 'buyScience':  { buyScience(); break; }
-  }
-});
-
-function renderContent() {
-  contentEl.innerHTML = '';
-  switch(currentTab) {
-    case 'upgrades':    clickUpgrades.forEach((u, i) => renderShopItem(u, i, 'buyUpgrade')); break;
-    case 'labs':        labs.forEach((l, i) => renderShopItem(l, i, 'buyLab')); break;
-    case 'discoveries': renderDiscoveries(); break;
-    case 'items':       renderInventory(); break;
-    case 'craft':       renderCraft(); break;
-    case 'skins':       renderSkins(); break;
-    case 'prestige':    renderPrestige(); break;
-    case 'daily':       renderDaily(); break;
-    case 'stats':       renderStats(); break;
-  }
-  updateDailyTabAlert();
-}
-
-function updateShopValues() {
-  if (currentTab !== 'upgrades' && currentTab !== 'labs') return;
-  const items = contentEl.querySelectorAll('.item[data-action]');
-  items.forEach(el => {
-    const action = el.dataset.action;
-    const idx = parseInt(el.dataset.idx, 10);
-    if (isNaN(idx)) return;
-    if (action === 'buyUpgrade') {
-      const u = clickUpgrades[idx]; if (!u) return;
-      const cost = getCost(u);
-      const costEl = el.querySelector('.cost'); const countEl = el.querySelector('.count');
-      if (costEl) costEl.textContent = fmt(cost) + ' эВ';
-      if (countEl) countEl.textContent = 'куплено: ' + u.count;
-      el.classList.toggle('locked', energy < cost);
-    } else if (action === 'buyLab') {
-      const l = labs[idx]; if (!l) return;
-      const cost = getCost(l);
-      const costEl = el.querySelector('.cost'); const countEl = el.querySelector('.count');
-      if (costEl) costEl.textContent = fmt(cost) + ' эВ';
-      if (countEl) countEl.textContent = 'куплено: ' + l.count;
-      el.classList.toggle('locked', energy < cost);
-    }
-  });
-}
-
-function renderShopItem(u, i, action) {
-  const cost = getCost(u);
-  const canAfford = energy >= cost;
-  const visible = u.count > 0 || energy >= u.baseCost * 0.3;
-  if (!visible) return;
-
-  const div = document.createElement('div');
-  div.className = 'item' + (canAfford ? '' : ' locked');
-  div.dataset.action = action;
-  div.dataset.idx = i;
-  div.innerHTML = `
-    <div class="info">
-      <div class="name">${u.name}</div>
-      <div class="desc">${u.desc}</div>
-    </div>
-    <div>
-      <div class="cost">${fmt(cost)} эВ</div>
-      <div class="count">куплено: ${u.count}</div>
-    </div>`;
-  contentEl.appendChild(div);
-}
-
-function renderDiscoveries() {
-  const header = document.createElement('div');
-  header.style.cssText = 'padding:10px;background:#141c3f;border:1px solid #2a3a6c;border-radius:10px;text-align:center;';
-  header.innerHTML = `
-    <div style="font-size:1.1em;color:#a06eff;font-weight:bold;">🔬 Очки науки: ${sciencePoints}</div>
-    <div style="font-size:0.75em;color:#8899cc;margin-top:4px;">Открытия покупаются за эВ + очки науки. Очки науки сохраняются при престиже!</div>
-  `;
-  contentEl.appendChild(header);
-
-  const sciCost = Math.max(1000, Math.floor(Math.pow(sciencePoints + 1, 1.5) * 2000));
-  const buySciDiv = document.createElement('div');
-  buySciDiv.className = 'item' + (energy >= sciCost ? '' : ' locked');
-  buySciDiv.dataset.action = 'buyScience';
-  buySciDiv.innerHTML = `
-    <div class="info">
-      <div class="name">🔬 Купить очко науки</div>
-      <div class="desc">+1 очко для новых открытий</div>
-    </div>
-    <div><div class="cost">${fmt(sciCost)} эВ</div></div>
-  `;
-  contentEl.appendChild(buySciDiv);
-
-  const title = document.createElement('div');
-  title.style.cssText = 'text-align:center;color:#8899cc;font-size:0.75em;padding:8px 0 4px;';
-  title.textContent = '━━━ ДЕРЕВО ЗАКОНОВ ФИЗИКИ ━━━';
-  contentEl.appendChild(title);
-
-  discoveries.forEach(d => {
-    const isOpen = discovered[d.id];
-    const canBuy = !isOpen && energy >= d.cost && sciencePoints >= d.science;
-    const div = document.createElement('div');
-    div.className = 'item' + (isOpen ? ' discovered' : (canBuy ? '' : ' locked'));
-    if (!isOpen) {
-      div.dataset.action = 'discovery';
-      div.dataset.id = d.id;
-    }
-    div.innerHTML = `
-      <div class="info">
-        <div class="name">${d.icon} ${d.name} ${isOpen ? '✅' : ''}</div>
-        <div class="desc">${d.desc}</div>
-      </div>
-      <div>
-        ${isOpen
-          ? `<div class="cost" style="color:#88ffaa;font-size:0.8em">открыто</div>`
-          : `<div class="cost">${fmt(d.cost)} эВ</div>
-             <div class="count" style="color:#a06eff">${d.science} 🔬</div>`}
-      </div>`;
-    contentEl.appendChild(div);
-  });
-}
-
-function renderDaily() {
-  const canClaim = canClaimDaily();
-  const dayIndex = dailyStreak % 7;
-
-  const header = document.createElement('div');
-  header.style.cssText = 'padding:10px;background:#141c3f;border:1px solid #2a3a6c;border-radius:10px;text-align:center;';
-  header.innerHTML = `
-    <div style="font-size:1.4em;color:#ffd166;font-weight:bold;">📅 День ${dailyStreak + (canClaim ? 1 : 0)}</div>
-    <div style="font-size:0.75em;color:#8899cc;margin-top:4px;">Заходи каждый день — на 7-й день легендарный сундук!</div>
-    <div style="font-size:0.75em;color:#88ffaa;margin-top:4px;">Серия: ${dailyStreak} дн.</div>
-  `;
-  contentEl.appendChild(header);
-
-  const grid = document.createElement('div');
-  grid.className = 'daily-grid';
-  for (let i = 0; i < 7; i++) {
-    const reward = dailyRewards[i];
-    const claimed = i < dayIndex || (i === dayIndex && !canClaim && dailyClaimedToday);
-    const isToday = i === dayIndex && canClaim;
-    const isBig = reward.big;
-
-    const cell = document.createElement('div');
-    cell.className = 'daily-day';
-    if (claimed) cell.classList.add('claimed');
-    if (isToday) cell.classList.add('today');
-    if (isBig) cell.classList.add('big');
-
-    cell.innerHTML = `
-      <div class="num">День ${i + 1}</div>
-      <div class="icon">${reward.icon}</div>
-      <div class="reward">${reward.reward}</div>
-    `;
-
-    if (isToday) {
-      cell.dataset.action = 'claimDaily';
-      cell.style.cursor = 'pointer';
-    }
-    grid.appendChild(cell);
-  }
-  contentEl.appendChild(grid);
-
-  if (canClaim) {
-    const btn = document.createElement('div');
-    btn.className = 'item';
-    btn.style.cssText = 'justify-content:center;text-align:center;font-weight:bold;color:#ffd166;border-color:#ffd166;box-shadow:0 0 15px #ffd16666;margin-top:8px;';
-    btn.dataset.action = 'claimDaily';
-    btn.textContent = `📅 ЗАБРАТЬ НАГРАДУ ЗА СЕГОДНЯ`;
-    contentEl.appendChild(btn);
-  } else {
-    const info = document.createElement('div');
-    info.style.cssText = 'text-align:center;padding:12px;color:#88ffaa;font-size:0.9em;';
-    info.textContent = '✅ Награда за сегодня получена. Возвращайся завтра!';
-    contentEl.appendChild(info);
-  }
-}
-
-function renderInventory() {
-  const summary = document.createElement('div');
-  summary.style.cssText = 'padding:10px;background:#0a2a1a;border:1px solid #2a6c4a;border-radius:10px;font-size:0.8em;color:#88ffaa;text-align:center;line-height:1.7;';
-  const mults = getMultipliers();
-  summary.innerHTML = `
-    📈 <b>Вклад предметов:</b><br>
-    +${fmt(flatBonus.eps)} эВ/сек (с множителями: <b>+${fmt(flatBonus.eps * mults.epsMult)}</b>)<br>
-    +${fmt(flatBonus.click)} эВ/клик (с множителями: <b>+${fmt(flatBonus.click * mults.clickMult)}</b>)
-  `;
-  contentEl.appendChild(summary);
-
-  const ids = Object.keys(inventory).filter(id => inventory[id] > 0);
-  if (ids.length === 0) {
-    const empty = document.createElement('div');
-    empty.style.cssText = 'text-align:center;color:#667799;padding:30px 10px;font-size:0.9em;';
-    empty.innerHTML = '🎒 Пусто<br><br>Кликай — получай сундуки!';
-    contentEl.appendChild(empty);
-    return;
-  }
-  const rarityOrder = { legend:0, epic:1, rare:2, common:3 };
-  const items = ids.map(id => itemPool.find(p => p.id === id)).filter(Boolean);
-  items.sort((a,b) => rarityOrder[a.rarity] - rarityOrder[b.rarity]);
-
-  items.forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'item rarity-' + item.rarity + ' no-click';
-    div.innerHTML = `
-      <div class="info">
-        <div class="name">${item.name}</div>
-        <div class="desc">${item.desc}</div>
-      </div>
-      <div><div class="count" style="font-size:1.1em">×${inventory[item.id]}</div></div>`;
-    contentEl.appendChild(div);
-  });
-}
-
-function renderCraft() {
-  const header = document.createElement('div');
-  header.style.cssText = 'text-align:center;color:#8899cc;font-size:0.8em;padding:4px 0 8px;';
-  header.textContent = 'Собери 3 одинаковых предмета → получи улучшенный';
-  contentEl.appendChild(header);
-
-  craftRecipes.forEach((r, i) => {
-    const have = inventory[r.from] || 0;
-    const canCraft = have >= 3;
-    const fromItem = itemPool.find(x => x.id === r.from);
-    const toItem   = itemPool.find(x => x.id === r.to);
-    if (!fromItem || !toItem) return;
-
-    const div = document.createElement('div');
-    div.className = 'item rarity-' + toItem.rarity + (canCraft ? '' : ' locked');
-    div.dataset.action = 'craft';
-    div.dataset.idx = i;
-    div.innerHTML = `
-      <div class="info">
-        <div class="name">${fromItem.name} ×3 → ${toItem.name}</div>
-        <div class="desc">${toItem.desc}</div>
-      </div>
-      <div><div class="count">${have}/3</div></div>`;
-    contentEl.appendChild(div);
-  });
-}
-
-function renderSkins() {
-  const header = document.createElement('div');
-  header.style.cssText = 'text-align:center;color:#8899cc;font-size:0.8em;padding:4px 0 8px;';
-  header.textContent = `Выбрано: ${skins.find(s => s.id === currentSkin).name}`;
-  contentEl.appendChild(header);
-
-  skins.forEach(skin => {
-    const owned = unlockedSkins.includes(skin.id);
-    const active = currentSkin === skin.id;
-    const canBuy = !owned && energy >= skin.cost;
-
-    const div = document.createElement('div');
-    div.className = 'item' + ((owned || canBuy) ? '' : ' locked');
-    if (active) div.style.borderColor = '#ffd166';
-    div.dataset.action = owned ? 'selectSkin' : 'buySkin';
-    div.dataset.skin = skin.id;
-
-    div.innerHTML = `
-      <div class="info">
-        <div class="name">${skin.name} ${active ? '✅' : ''}</div>
-        <div class="desc">${skin.desc}</div>
-      </div>
-      <div>
-        ${owned
-          ? `<div class="cost" style="color:#4dd0ff">${active?'активен':'выбрать'}</div>`
-          : `<div class="cost">${fmt(skin.cost)} эВ</div>`}
-      </div>`;
-    contentEl.appendChild(div);
-  });
-}
-
-function renderPrestige() {
-  const gain = getPrestigeGain();
-  const mult = (1 + prestigePoints * 0.10).toFixed(2);
-
-  const info = document.createElement('div');
-  info.style.cssText = 'text-align:center;padding:10px;background:#141c3f;border-radius:10px;border:1px solid #2a3a6c;';
-  info.innerHTML = `
-    <div style="font-size:1.6em;color:#a06eff;font-weight:bold;">⭐ ${prestigePoints}</div>
-    <div style="font-size:0.8em;color:#8899cc;margin-top:4px;">Тёмной энергии</div>
-    <div style="font-size:0.9em;color:#ffd166;margin-top:8px;">Множитель дохода: ×${mult}</div>
-    <div style="font-size:0.75em;color:#8899cc;margin-top:4px;">Каждая ⭐ = +10% навсегда</div>`;
-  contentEl.appendChild(info);
-
-  const btn = document.createElement('div');
-  btn.className = 'item' + (gain > 0 ? '' : ' locked');
-  btn.style.cssText = 'justify-content:center;text-align:center;font-weight:bold;color:#4dd0ff;';
-  btn.dataset.action = 'prestige';
-  btn.textContent = gain > 0
-    ? `⭐ Переродиться (+${gain} Тёмной энергии)`
-    : `Нужно заработать больше (${fmt(totalEarned)} / 1M)`;
-  contentEl.appendChild(btn);
-
-  const warn = document.createElement('div');
-  warn.style.cssText = 'font-size:0.72em;color:#8899cc;text-align:center;padding:8px;';
-  warn.textContent = '⚠️ Сбросятся: эВ, апгрейды, лаборатории, предметы. Сохранятся: скины, открытия, очки науки, престиж, ежедневки.';
-  contentEl.appendChild(warn);
-}
-
-function renderStats() {
-  const mults = getMultipliers();
-  const critChance = (getCritChance() * 100).toFixed(1);
-  const critMult = getCritMult();
-  const rows = [
-    ['⏱ Время в игре', fmtTime(Date.now() - playStart)],
-    ['👆 Всего кликов', totalClicks.toLocaleString('ru')],
-    ['💥 Критических кликов', totalCrits.toLocaleString('ru')],
-    ['💰 Всего заработано', fmt(totalEarned) + ' эВ'],
-    ['📦 Сундуков открыто', chestsOpened],
-    ['🏭 Лабораторий куплено', labs.reduce((s,l)=>s+l.count,0)],
-    ['⚙️ Улучшений куплено', clickUpgrades.reduce((s,u)=>s+u.count,0)],
-    ['🔬 Открытий сделано', Object.keys(discovered).length + ' / ' + discoveries.length],
-    ['⭐ Тёмной энергии', prestigePoints],
-    ['🎨 Скинов открыто', unlockedSkins.length + ' / ' + skins.length],
-    ['📅 Дней подряд', dailyStreak],
-    ['━━━ ОФФЛАЙН ━━━', ''],
-    ['🌙 Оффлайн-сессий', offlineSessionsCount],
-    ['🌙 Заработано оффлайн', fmt(totalOfflineEarned) + ' эВ'],
-    ['🌙 Эффективность', (OFFLINE_EFFICIENCY * 100) + '%'],
-    ['🌙 Лимит накопления', MAX_OFFLINE_HOURS + ' ч'],
-    ['━━━ ОТКУДА ДОХОД ━━━', ''],
-    ['🏭 От лабораторий', fmt(labs.reduce((s,l)=>s+l.effect*l.count,0)) + ' эВ/сек'],
-    ['📦 От предметов (flat)', fmt(flatBonus.eps) + ' эВ/сек'],
-    ['⚙️ Улучшений база', fmt(1 + clickUpgrades.reduce((s,u)=>s+u.effect*u.count,0)) + ' эВ/клик'],
-    ['📦 Предметов база', fmt(flatBonus.click) + ' эВ/клик'],
-    ['✖️ Множитель эВ/сек', '×' + mults.epsMult.toFixed(2)],
-    ['✖️ Множитель клика', '×' + mults.clickMult.toFixed(2)],
-    ['💥 Крит-шанс', critChance + '%'],
-    ['💥 Крит-множитель', '×' + critMult],
-    ['━━━ ИТОГО ━━━', ''],
-    ['📊 Текущий эВ/сек', fmt(getEPS())],
-    ['👆 За клик', fmt(getClickPower())],
-  ];
-  rows.forEach(([k,v]) => {
-    const isSep = k.includes('━━━');
-    const div = document.createElement('div');
-    div.className = 'item no-click';
-    if (isSep) div.style.cssText = 'background:transparent;border:none;padding:4px;color:#667799;font-size:0.75em;justify-content:center;text-align:center;';
-    div.innerHTML = `<div class="info"><div class="name" style="font-size:0.85em">${k}</div></div>
-                     <div><div class="cost" style="color:#e0e6ff">${v}</div></div>`;
-    contentEl.appendChild(div);
-  });
-}
-
-function showToast(text) {
-  const el = document.createElement('div');
-  el.className = 'bonus-toast';
-  el.textContent = text;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 3000);
-}
-
-// ============================================================
-// ================== ОБНОВЛЕНИЕ UI ===========================
-// ============================================================
-
-const energyEl = document.getElementById('energy');
-const epsEl = document.getElementById('eps');
-const bonusLineEl = document.getElementById('bonusLine');
-const chestProgressEl = document.getElementById('chestProgress');
-const chestProgressTextEl = document.getElementById('chestProgressText');
-
-function applySkin() {
-  const skin = skins.find(s => s.id === currentSkin) || skins[0];
-  atom.className = skin.cls;
-}
-
-function updateStatsUI() {
-  energyEl.textContent = fmt(energy);
-  const eps = getEPS();
-  const click = getClickPower();
-  epsEl.textContent = `${fmt(eps)} эВ/сек • +${fmt(click)} за клик`;
-
-  const { epsMult, clickMult } = getMultipliers();
-  const parts = [];
-  if (epsMult > 1.001)   parts.push(`×${epsMult.toFixed(2)} эВ/сек`);
-  if (clickMult > 1.001) parts.push(`×${clickMult.toFixed(2)} клик`);
-  parts.push(`💥 ${(getCritChance()*100).toFixed(0)}%`);
-  if (tempBonus.length)  parts.push(`⏱ ${tempBonus.length}`);
-  if (prestigePoints > 0)parts.push(`⭐ ${prestigePoints}`);
-  if (sciencePoints > 0) parts.push(`🔬 ${sciencePoints}`);
-  bonusLineEl.textContent = 'Бонусы: ' + parts.join(' • ');
-
-  const pct = (chestClicks / CHEST_THRESHOLD) * 100;
-  chestProgressEl.style.width = pct + '%';
-  const ct = getChestType();
-  chestProgressTextEl.textContent = `${chestClicks}/${CHEST_THRESHOLD} • ${ct.name}`;
-
-  applySkin();
-}
-
-// ============================================================
-// ================== ИГРОВОЙ ЦИКЛ ============================
-// ============================================================
-
-let lastFrameRealTime = Date.now();  // wall-clock, для детекта разрывов
-
-function loop(now) {
-  const nowReal = Date.now();
-  const realGapMs = nowReal - lastFrameRealTime;
-  lastFrameRealTime = nowReal;
-
-  // 🔥 ДЕТЕКТ РАЗРЫВА — если вкладка была в фоне и rAF не срабатывал
-  if (realGapMs > MIN_OFFLINE_SECONDS * 1000) {
-    giveOfflineReward(realGapMs / 1000, false);
-  }
-
-  const dt = Math.min((now - lastFrameTime) / 1000, 0.1);
-  lastFrameTime = now;
-
-  const eps = getEPS();
-  if (eps > 0) {
-    energy += eps * dt;
-    totalEarned += eps * dt;
-  }
-
-  updateParticles(dt);
-  updateStatsUI();
-  requestAnimationFrame(loop);
-}
-
-setInterval(() => {
-  if (currentTab === 'upgrades' || currentTab === 'labs') {
-    updateShopValues();
-  }
-}, 100);
-
-// Проверка нового дня
-setInterval(() => {
-  if (canClaimDaily() && !dailyClaimedToday) {
-    updateDailyTabAlert();
-  } else if (dailyClaimedToday) {
-    const lastDate = new Date(lastDailyClaim);
-    const nowDate = new Date();
-    if (lastDate.toDateString() !== nowDate.toDateString()) {
-      dailyClaimedToday = false;
-      save();
-      updateDailyTabAlert();
-    }
-  }
-}, 60000);
-
-// ============================================================
-// ================== СОХРАНЕНИЕ И ОФФЛАЙН ====================
-// ============================================================
-
-// Периодически обновляем lastOnlineTime и сохраняем
-setInterval(() => {
-  lastOnlineTime = Date.now();
-  save();
-}, 5000);
-
-// При сворачивании вкладки — сохранить
-// При возврате — начислить оффлайн
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
-    lastOnlineTime = Date.now();
-    save();
-  } else if (document.visibilityState === 'visible') {
-    const gapSec = (Date.now() - lastOnlineTime) / 1000;
-    if (gapSec >= MIN_OFFLINE_SECONDS) {
-      giveOfflineReward(gapSec, false);
-    }
-    lastOnlineTime = Date.now();
-    lastFrameRealTime = Date.now(); // сбрасываем, чтобы loop не дублировал
-  }
-});
-
-// При закрытии вкладки — сохранить
-window.addEventListener('beforeunload', () => {
-  lastOnlineTime = Date.now();
-  save();
-});
-
-function resetGame() {
-  if (!confirm('ПОЛНЫЙ сброс?')) return;
-  safeRemoveItem(STORAGE_KEY);
-  energy = 0; totalClicks = 0; chestClicks = 0; chestsOpened = 0; totalEarned = 0; totalCrits = 0;
-  prestigePoints = 0; sciencePoints = 0;
-  currentSkin = 'default'; unlockedSkins = ['default'];
-  flatBonus = { eps:0, click:0 };
-  pctBonus  = { eps:0, click:0 };
-  tempBonus = []; tempCritBonus = [];
-  inventory = {}; discovered = {};
-  dailyStreak = 0; lastDailyClaim = 0; dailyClaimedToday = false;
-  totalOfflineEarned = 0; offlineSessionsCount = 0;
-  clickUpgrades.forEach(u => u.count = 0);
-  labs.forEach(l => l.count = 0);
-  playStart = Date.now();
-  lastOnlineTime = Date.now();
-  renderContent();
-  updateStatsUI();
-}
-
-// ============================================================
-// ================== СТАРТ ===================================
-// ============================================================
-
-load();
-document.getElementById('soundBtn').textContent = soundEnabled ? '🔊 Звук: вкл' : '🔇 Звук: выкл';
-initAudio();
-renderContent();
-updateStatsUI();
-updateDailyTabAlert();
-
-// 🔥 ПРОВЕРКА ОФФЛАЙНА ПРИ СТАРТЕ — главная фича
-if (lastOnlineTime > 0) {
-  const offlineSec = (Date.now() - lastOnlineTime) / 1000;
-  if (offlineSec >= MIN_OFFLINE_SECONDS) {
-    // Отложим на 400мс, чтобы UI успел отрисоваться
-    setTimeout(() => {
-      giveOfflineReward(offlineSec, true);
-    }, 400);
-  }
-}
-// Обновляем время "сейчас" после проверки
-lastOnlineTime = Date.now();
-lastFrameRealTime = Date.now();
-
-requestAnimationFrame(loop);
-
-// Резервный тик раз в секунду (для суспендированных вкладок)
-let lastTick = Date.now();
-setInterval(() => {
-  const now = Date.now();
-  const dt = Math.min((now - lastTick) / 1000, 1);
-  lastTick = now;
-  const eps = getEPS();
-  if (eps > 0) {
-    energy += eps * dt;
-    totalEarned += eps * dt;
-  }
-  updateStatsUI();
-}, 1000);
-
-if (!storageAvailable) {
-  setTimeout(() => {
-    const warn = document.createElement('div');
-    warn.className = 'storage-warn';
-    warn.textContent = '⚠️ Сохранение недоступно (песочница). Оффлайн-фарм работать НЕ будет! Скачай файл и открой в браузере.';
-    document.body.appendChild(warn);
-    setTimeout(() => warn.remove(), 10000);
-  }, 500);
-}
-
-scheduleReaction();
-</script>
+    <script>
+        (function() {
+            // ------------- 30 вопросов -------------
+            const questions = [
+                { q: "Когда отмечают Международный женский день?", options: ["8 марта", "1 марта", "7 марта", "9 марта"], correct: 0 },
+                { q: "Какой цветок традиционно дарят на 8 марта в России?", options: ["Розы", "Тюльпаны", "Ромашки", "Кактусы"], correct: 1 },
+                { q: "В каком году впервые отпраздновали 8 марта?", options: ["1910", "1911", "1921", "1899"], correct: 1 },
+                { q: "Кто предложил учредить Международный женский день?", options: ["Клара Цеткин", "Надежда Крупская", "Роза Люксембург", "Александра Коллонтай"], correct: 0 },
+                { q: "Какой камень считается женским талисманом весны?", options: ["Изумруд", "Бирюза", "Аметист", "Жемчуг"], correct: 0 },
+                { q: "Какое растение не дарят на 8 марта?", options: ["Мимоза", "Тюльпан", "Гиацинт", "Опята"], correct: 3 },
+                { q: "Символ 8 марта в СССР в 70-80-е?", options: ["Мимоза и веточки", "Гвоздика", "Роза", "Ландыш"], correct: 0 },
+                { q: "Сколько стран официально отмечают 8 марта?", options: ["Около 30", "Более 50", "Меньше 10", "Ровно 15"], correct: 0 },
+                { q: "Весенний месяц, в который празднуют Женский день?", options: ["Март", "Апрель", "Февраль", "Май"], correct: 0 },
+                { q: "Какой праздник был до 8 марта в Древнем Риме?", options: ["Матроналии", "Сатурналии", "Луперкалии", "Вакханалии"], correct: 0 },
+                { q: "Кто из композиторов написал балет 'Весна священная'?", options: ["Чайковский", "Стравинский", "Прокофьев", "Рахманинов"], correct: 1 },
+                { q: "Какая актриса стала символом женственности в XX веке?", options: ["Мэрилин Монро", "Одри Хепбёрн", "Софи Лорен", "Вивьен Ли"], correct: 1 },
+                { q: "Как называют женщину-весну в русских сказках?", options: ["Весна-Красна", "Марья-искусница", "Снегурочка", "Царевна-лягушка"], correct: 0 },
+                { q: "Что дарят в Японии девочкам 3 марта (Хинамацури)?", options: ["Куклы", "Ирисы", "Рис", "Сакуру"], correct: 0 },
+                { q: "В какой стране 8 марта — государственный выходной?", options: ["Россия", "США", "Франция", "Германия"], correct: 0 },
+                { q: "Какая певица исполнила песню 'Лучшие цветы'?", options: ["Валерия", "Алсу", "Кристина Орбакайте", "Ирина Аллегрова"], correct: 3 },
+                { q: "Какого цвета не бывает у тюльпанов?", options: ["Синий", "Жёлтый", "Красный", "Белый"], correct: 0 },
+                { q: "Какой цветок называют 'слезой богини'?", options: ["Ландыш", "Лилия", "Ромашка", "Орхидея"], correct: 0 },
+                { q: "Какое дерево весной цветёт пушистыми серёжками?", options: ["Верба", "Дуб", "Клён", "Сосна"], correct: 0 },
+                { q: "Как звали первую женщину-космонавта?", options: ["Валентина Терешкова", "Светлана Савицкая", "Елена Кондакова", "Пегги Уитсон"], correct: 0 },
+                { q: "Какой напиток часто пьют за женское здоровье?", options: ["Красное вино", "Шампанское", "Зелёный чай", "Молоко"], correct: 1 },
+                { q: "Как звали богиню весны у славян?", options: ["Леля", "Марена", "Жива", "Весна"], correct: 0 },
+                { q: "Что означает мимоза в подарок?", options: ["Застенчивость и чувствительность", "Страсть", "Верность", "Богатство"], correct: 0 },
+                { q: "В каком фильме звучит 'Весна на Заречной улице'?", options: ["Весна на Заречной улице", "Карнавальная ночь", "Девчата", "Свинарка и пастух"], correct: 0 },
+                { q: "Кто написал 'Вальс цветов' из балета 'Щелкунчик'?", options: ["Чайковский", "Шопен", "Бах", "Моцарт"], correct: 0 },
+                { q: "Какой праздник отмечают через месяц после 8 марта?", options: ["Пасха", "Новый год", "День космонавтики", "День смеха"], correct: 3 },
+                { q: "Название тюльпана с бахромой?", options: ["Бахромчатые", "Пионовидные", "Лилиецветные", "Попугайные"], correct: 3 },
+                { q: "Кто написал картину 'Весна'?", options: ["Боттичелли", "Рафаэль", "Микеланджело", "Леонардо"], correct: 0 },
+                { q: "Какого цветка не существует в природе?", options: ["Фиолетовая роза", "Зелёная роза", "Чёрная роза", "Голубая роза"], correct: 3 },
+                { q: "Что весной приносят аисты?", options: ["Детей", "Цветы", "Письма", "Весну"], correct: 0 }
+            ];
+            while(questions.length < 30) questions.push({...questions[questions.length-1]});
+            if (questions.length > 30) questions.length = 30;
+
+            // ---------- ВИКТОРИНА ----------
+            let currentQuestionIndex = 0;
+            let score = 0;
+            let userAnswers = new Array(questions.length).fill(null);
+
+            const questionTextEl = document.getElementById('questionText');
+            const answersContainer = document.getElementById('answersContainer');
+            const nextBtn = document.getElementById('nextBtn');
+            const questionCounterEl = document.getElementById('questionCounter');
+            const progressBar = document.getElementById('quizProgressBar');
+            const quizResultMessage = document.getElementById('quizResultMessage');
+
+            function renderQuestion() {
+                const q = questions[currentQuestionIndex];
+                questionTextEl.textContent = q.q;
+                const selectedIdx = userAnswers[currentQuestionIndex];
+                answersContainer.innerHTML = '';
+                q.options.forEach((opt, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'answer-btn';
+                    btn.textContent = `${String.fromCharCode(65+idx)}. ${opt}`;
+                    if (selectedIdx !== null) {
+                        if (idx === q.correct) btn.classList.add('selected-correct');
+                        else if (idx === selectedIdx && selectedIdx !== q.correct) btn.classList.add('selected-wrong');
+                        btn.disabled = true;
+                    } else {
+                        btn.addEventListener('click', () => handleAnswer(idx));
+                    }
+                    answersContainer.appendChild(btn);
+                });
+
+                const answeredCount = userAnswers.filter(a => a !== null).length;
+                progressBar.style.width = `${(answeredCount / questions.length) * 100}%`;
+                questionCounterEl.textContent = `${currentQuestionIndex+1} / ${questions.length}`;
+                nextBtn.disabled = (userAnswers[currentQuestionIndex] === null);
+                if (answeredCount === questions.length) {
+                    nextBtn.disabled = false;
+                    nextBtn.textContent = (currentQuestionIndex === questions.length-1) ? '🏁 Показать результат' : '▶ Дальше';
+                } else {
+                    nextBtn.textContent = '▶ Дальше';
+                }
+            }
+
+            function handleAnswer(selectedIndex) {
+                if (userAnswers[currentQuestionIndex] !== null) return;
+                const q = questions[currentQuestionIndex];
+                userAnswers[currentQuestionIndex] = selectedIndex;
+                if (selectedIndex === q.correct) score++;
+                renderQuestion();
+                nextBtn.disabled = false;
+            }
+
+            function getCongratulationMessage(score, total) {
+                const percentage = (score / total) * 100;
+                
+                if (percentage === 100) {
+                    return "💯🌺 ВОСХИТИТЕЛЬНО! 30 из 30! Вы настоящий знаток весенних традиций! Пусть ваши знания так же ярко сияют, как солнце в этот прекрасный день! 💐✨";
+                } else if (score >= 27) {
+                    return "🏆🌟 БЛИСТАТЕЛЬНО! " + score + " правильных ответов! Ваша эрудиция достойна самых красивых комплиментов! С 8 марта! 🌷💫";
+                } else if (score >= 24) {
+                    return "🎉💮 ПРЕКРАСНЫЙ РЕЗУЛЬТАТ! " + score + " из 30! Вы словно весенний букет — яркая и неповторимая! Продолжайте в том же духе! 🌸🌼";
+                } else if (score >= 20) {
+                    return "🌹🌿 ОЧЕНЬ ХОРОШО! " + score + " правильных ответов! Вы порадовали нас своей эрудицией, как первые цветы радуют глаз! С праздником! 🎀✨";
+                } else if (score >= 15) {
+                    return "🌱💗 ХОРОШИЙ РЕЗУЛЬТАТ! " + score + " из 30! Как весна, вы только начинаете раскрываться! Желаем вам новых открытий и знаний! 🌷📚";
+                } else if (score >= 10) {
+                    return "🌼🍃 НЕПЛОХО! " + score + " правильных ответов! Весна только начинается, и впереди много интересного! Главное — ваше очарование! 💖🌸";
+                } else if (score >= 5) {
+                    return "🌱💕 " + score + " ИЗ 30! Как первые листочки, ваши знания будут расти с каждым днём! С праздником весны, нежности и красоты! 🦋🌺";
+                } else {
+                    return "🍃🌷 " + score + " правильных ответов. Но главное не количество баллов, а ваша улыбка! Она дороже всех цветов мира! С 8 марта! 💐😊💗";
+                }
+            }
+
+            function nextQuestion() {
+                if (nextBtn.disabled) return;
+                const allAnswered = userAnswers.every(a => a !== null);
+                if (allAnswered && currentQuestionIndex === questions.length-1) {
+                    const message = getCongratulationMessage(score, questions.length);
+                    quizResultMessage.innerHTML = message;
+                    nextBtn.disabled = true;
+                    
+                    // Запускаем дополнительный фейерверк в честь завершения викторины
+                    for (let i = 0; i < 5; i++) {
+                        setTimeout(() => createFirework(), i * 200);
+                    }
+                    return;
+                }
+                if (currentQuestionIndex < questions.length-1) {
+                    currentQuestionIndex++;
+                    renderQuestion();
+                }
+            }
+            nextBtn.addEventListener('click', nextQuestion);
+            renderQuestion();
+
+            // ---------- ПАДАЮЩИЕ ЦВЕТЫ (фон) ----------
+            const flowerContainer = document.getElementById('flowerContainer');
+            const flowersList = ['🌸','🌼','🌺','🌷','🌹','🌻','🌿','🌸','🌼','🌷']; 
+            function createFlower() {
+                const flower = document.createElement('div');
+                flower.className = 'flower';
+                flower.textContent = flowersList[Math.floor(Math.random() * flowersList.length)];
+                const size = 1.2 + Math.random() * 1.5;
+                flower.style.fontSize = size + 'rem';
+                flower.style.left = Math.random() * 100 + '%';
+                flower.style.animationDuration = 6 + Math.random() * 12 + 's';
+                flower.style.animationDelay = Math.random() * -20 + 's';
+                flowerContainer.appendChild(flower);
+
+                if (flowerContainer.children.length > 120) {
+                    flowerContainer.removeChild(flowerContainer.children[0]);
+                }
+            }
+            for (let i = 0; i < 40; i++) createFlower();
+            setInterval(createFlower, 2000);
+
+            // ---------- ФЕЙЕРВЕРК ИЗ СЕРДЕЧЕК (на canvas) ----------
+            const canvas = document.getElementById('heart-fireworks-canvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            let animationFrame = null;
+            let fireworksActive = false;
+
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            // Разные сердечки для фейерверка
+            const heartEmojis = ['💛', '💚', '💙', '💜', '💖', '💗', '💓', '💕', '❤️‍🔥', '💘', '💝'];
+
+            function createFirework() {
+                const count = 15 + Math.floor(Math.random() * 15);
+                const baseX = Math.random() * canvas.width;
+                const baseY = Math.random() * canvas.height * 0.6 + 80;
+                
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * 2 * Math.PI;
+                    const speed = 2 + Math.random() * 5;
+                    const vx = Math.cos(angle) * speed;
+                    const vy = Math.sin(angle) * speed - 1.2;
+                    
+                    particles.push({
+                        x: baseX,
+                        y: baseY,
+                        vx: vx,
+                        vy: vy,
+                        life: 0.9 + Math.random() * 0.5,
+                        emoji: heartEmojis[Math.floor(Math.random() * heartEmojis.length)],
+                        size: 16 + Math.random() * 16
+                    });
+                }
+            }
+
+            function drawFireworks() {
+                if (!fireworksActive && particles.length === 0) {
+                    if (animationFrame) {
+                        cancelAnimationFrame(animationFrame);
+                        animationFrame = null;
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    }
+                    return;
+                }
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.05;
+                    p.life -= 0.006;
+                    
+                    if (p.life <= 0.02 || p.y > canvas.height + 50) {
+                        particles.splice(i, 1);
+                        continue;
+                    }
+                    
+                    ctx.save();
+                    ctx.globalAlpha = p.life * 0.9;
+                    ctx.font = `${p.size * p.life}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "EmojiOne Color", sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#000';
+                    ctx.fillText(p.emoji, p.x, p.y);
+                    ctx.restore();
+                }
+                
+                if (fireworksActive) {
+                    if (Math.random() < 0.2) createFirework();
+                }
+                
+                animationFrame = requestAnimationFrame(drawFireworks);
+            }
+
+            function startFireworks() {
+                fireworksActive = true;
+                if (!animationFrame) {
+                    drawFireworks();
+                }
+                for (let i = 0; i < 4; i++) {
+                    setTimeout(() => createFirework(), i * 150);
+                }
+            }
+
+            function stopFireworks() {
+                fireworksActive = false;
+            }
+
+            // ---------- КЛИКЕР С СЮРПРИЗОМ (НАДПИСЬ НЕ МЕНЯЕТСЯ) ----------
+            const heartBtn = document.getElementById('heartClicker');
+            const clickCounterDisplay = document.getElementById('clickCounterDisplay');
+            const surpriseBox = document.getElementById('surpriseBox');
+            const resetSurpriseBtn = document.getElementById('resetSurpriseBtn');
+
+            let clickCount = 0;
+            const maxClicks = 100;
+            let fireworksTriggered = false;
+
+            function updateClicker() {
+                clickCounterDisplay.textContent = `${clickCount} / ${maxClicks}`;
+                
+                // НАДПИСЬ НИКОГДА НЕ МЕНЯЕТСЯ!
+                surpriseBox.innerHTML = '✨ жди чуда ✨';
+                
+                if (clickCount >= maxClicks && !fireworksTriggered) {
+                    fireworksTriggered = true;
+                    startFireworks();
+                }
+            }
+
+            heartBtn.addEventListener('click', function() {
+                if (clickCount < maxClicks) {
+                    clickCount++;
+                    updateClicker();
+                }
+                
+                if (clickCount >= maxClicks) {
+                    createFirework(); // сердечковая вспышка при каждом клике после 100
+                }
+            });
+
+            resetSurpriseBtn.addEventListener('click', function() {
+                clickCount = 0;
+                fireworksTriggered = false;
+                stopFireworks();
+                particles = [];
+                updateClicker();
+                if (animationFrame) {
+                    cancelAnimationFrame(animationFrame);
+                    animationFrame = null;
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            });
+
+            updateClicker();
+        })();
+    </script>
 </body>
 </html>
